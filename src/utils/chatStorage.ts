@@ -15,7 +15,7 @@ declare global {
 const generateTitle = (message: string): string => {
   const words = message.split(' ').slice(0, 6);
   return words.join(' ') + (words.length < message.split(' ').length ? '...' : '');
-};
+};  
 
 // Create a new chat session
 export const createChatSession = async (firstMessage: string): Promise<ChatSession> => {
