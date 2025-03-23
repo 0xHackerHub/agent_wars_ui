@@ -1,6 +1,6 @@
 "use client"
 import React, { useEffect, useState } from "react";
-import { Home, Users, History, Plus, Moon, Sun, RadioTower, Settings, Download, Network, MessageCircle, Info, Cog, Link2, Activity, Bot, FolderSearch, X, Play, Pause, Box } from "lucide-react";
+import { Home, Users, History, Plus, Moon, Sun, RadioTower, Settings, Download, Network, MessageCircle, Info, Cog, Link2, Activity, Bot, FolderSearch, X, Play, Pause, Box, ChevronsLeftRightEllipsis } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/components/theme-provider";
 import { AnimatePresence, motion } from "framer-motion";
@@ -100,41 +100,6 @@ const InferenceModeNav = ({
           currentRoute={activeRoute}
         />
       </div>
-      <div onClick={() => setActiveRoute('connections')}>
-        <NavItem 
-          icon={<Link2 size={16} />} 
-          label="Connections" 
-          route="connections"
-          currentRoute={activeRoute}
-        />
-      </div>
-      <div onClick={() => setActiveRoute('models')}>
-        <NavItem 
-          icon={<Box size={16} />} 
-          label="Models" 
-          route="models"
-          currentRoute={activeRoute}
-        />
-      </div>
-    </motion.div>
-  );
-};
-
-// Component for operator mode navigation
-const OperatorModeNav = ({ 
-  setActiveRoute, 
-  activeRoute,
-}: { 
-  setActiveRoute: (route: Route) => void; 
-  activeRoute: Route;
-}) => {
-  return (
-    <motion.div
-      className="space-y-1"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-    >
       <div onClick={() => setActiveRoute('connections')}>
         <NavItem 
           icon={<Link2 size={16} />} 
@@ -270,20 +235,11 @@ export default function BaseLayout({ children }: { children: React.ReactNode }) 
         
             {/* Navigation */}
             <motion.div className="flex-1 px-2 mt-4 space-y-1" variants={itemVariants}>
-          
-          
           {/* Navigation Items */}
-          {isNetwork ? (
-            <OperatorModeNav 
-              setActiveRoute={setActiveRoute} 
-              activeRoute={activeRoute}
-            />
-          ) : (
             <InferenceModeNav 
               setActiveRoute={setActiveRoute}
               activeRoute={activeRoute}
             />
-          )}
             </motion.div>
           </motion.div>
 
@@ -319,74 +275,18 @@ export default function BaseLayout({ children }: { children: React.ReactNode }) 
                       <ControlButton 
                         icon={<RadioTower className="w-4 h-4" />}
                         hasIndicator
-                        indicatorColor={"bg-neutral-400"}
+                        indicatorColor={"bg-blue-500"}
                         iconColor={"text-neutral-400"}
                       />
                     </div>
                   </SheetTrigger>
                   <SheetContent side="right" className="w-[400px] sm:w-[540px] border-0 bg-white/40 dark:bg-neutral-900/40 backdrop-blur-xl shadow-[0_8px_32px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_32px_rgb(0,0,0,0.1)]">
                     <SheetHeader className="px-6 pt-6">
-                      <SheetTitle className="text-xl font-medium text-gray-800 dark:text-neutral-200">Node Status</SheetTitle>
+                      <SheetTitle className="text-xl font-medium text-gray-800 dark:text-neutral-200">Server Status</SheetTitle>
                     </SheetHeader>
                     <div className="px-6">
                       <div className="h-[1px] bg-white/20 dark:bg-neutral-800/50 my-6" />
                       <div className="space-y-6">
-                        <Tabs defaultValue="full" className="w-full">
-                          <TabsList className="grid w-full grid-cols-2">
-                            <TabsTrigger value="full">Full Node</TabsTrigger>
-                            <TabsTrigger value="light" disabled>
-                              <div className="relative group">
-                                <span>Light Node</span>
-                                {/* Tooltip */}
-                                <div className="absolute left-1/2 -translate-x-1/2 -top-12 px-3 py-2 bg-white/60 dark:bg-neutral-900/60 backdrop-blur-xl rounded-lg border border-white/20 dark:border-neutral-800/50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 whitespace-nowrap">
-                                  <span className="text-xs text-gray-800 dark:text-neutral-200">Coming Soon</span>
-                                  <div className="absolute bottom-[-4px] left-1/2 -translate-x-1/2 w-2 h-2 bg-white/60 dark:bg-neutral-900/60 rotate-45 border-r border-b border-white/20 dark:border-neutral-800/50"></div>
-                                </div>
-                              </div>
-                            </TabsTrigger>
-                          </TabsList>
-
-                          <TabsContent value="">
-                            
-                            <div className="flex items-center justify-center mb-4">
-                              <div 
-                                className={cn(
-                                  "rounded-full w-10 h-10",
-                                  "bg-neutral-400 animate-pulse"
-                                )}
-                              />
-                            </div>
-                            <div className="space-y-4">
-                              <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-600 dark:text-neutral-400">Connection Status</span>
-                                <div className="flex items-center space-x-2">
-                                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                                  <span className="text-sm font-medium text-emerald-500">Connected</span>
-                                </div>
-                              </div>
-                              <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-600 dark:text-neutral-400">Active Peers</span>
-                                <span className="text-sm font-medium text-gray-800 dark:text-neutral-200">128</span>
-                              </div>
-                              <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-600 dark:text-neutral-400">Network Latency</span>
-                                <span className="text-sm font-medium text-gray-800 dark:text-neutral-200">35ms</span>
-                              </div>
-                              <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-600 dark:text-neutral-400">Uptime</span>
-                                <span className="text-sm font-medium text-gray-800 dark:text-neutral-200">5h 12m</span>
-                              </div>
-                              <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-600 dark:text-neutral-400">Blocks Synced</span>
-                                <span className="text-sm font-medium text-gray-800 dark:text-neutral-200">1,234,567</span>
-                              </div>
-                              <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-600 dark:text-neutral-400">Storage Used</span>
-                                <span className="text-sm font-medium text-gray-800 dark:text-neutral-200">256 GB</span>
-                              </div>
-                            </div>
-                          </TabsContent>
-                        </Tabs>
 
                         {/* Network Stats */}
                         <div>
@@ -402,11 +302,22 @@ export default function BaseLayout({ children }: { children: React.ReactNode }) 
 
                           {/* Network Stats Content */}
                           <div className="space-y-4">
-                            <h3 className="text-sm font-medium text-gray-800 dark:text-neutral-200">Network Statistics</h3>
                             <div className="space-y-4">
                               <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-600 dark:text-neutral-400">Waku Version</span>
-                                <span className="text-sm font-medium text-gray-800 dark:text-neutral-200">{'Unknown'}</span>
+                                <span className="text-sm text-gray-600 dark:text-neutral-400">Server Status</span>
+                                <span className="text-sm font-medium text-gray-800 dark:text-neutral-200">{'Live'}</span>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-gray-600 dark:text-neutral-400">Server Latency</span>
+                                <span className="text-sm font-medium text-gray-800 dark:text-neutral-200">{'10ms'}</span>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-gray-600 dark:text-neutral-400">Logs</span>
+                                <span className="text-sm font-medium text-gray-800 dark:text-neutral-200">{'Operational'}</span>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-gray-600 dark:text-neutral-400">Total Requests</span>
+                                <span className="text-sm font-medium text-gray-800 dark:text-neutral-200">{'100'}</span>
                               </div>
                             </div>
                           </div>
@@ -418,12 +329,17 @@ export default function BaseLayout({ children }: { children: React.ReactNode }) 
                 <Sheet>
                   <SheetTrigger asChild>
                     <div>
-                      <ControlButton icon={<Settings className="w-4 h-4 text-gray-600 dark:text-neutral-400" />} />
+                      <ControlButton icon={
+                        <ChevronsLeftRightEllipsis className="w-4 h-4 text-gray-600 dark:text-neutral-400" />}
+                        hasIndicator
+                        indicatorColor={"bg-blue-500"}
+                        iconColor={"text-neutral-400"}
+                      />
                     </div>
                   </SheetTrigger>
                   <SheetContent side="right" className="w-[400px] sm:w-[540px] border-0 bg-white/40 dark:bg-neutral-900/40 backdrop-blur-xl shadow-[0_8px_32px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_32px_rgb(0,0,0,0.1)]">
                     <SheetHeader className="px-6 pt-6">
-                      <SheetTitle className="text-xl font-medium text-gray-800 dark:text-neutral-200">Settings</SheetTitle>
+                      <SheetTitle className="text-xl font-medium text-gray-800 dark:text-neutral-200">Logs</SheetTitle>
                     </SheetHeader>
                     <div className="px-6">
                       <div className="h-[1px] bg-white/20 dark:bg-neutral-800/50 my-6" />
@@ -433,85 +349,12 @@ export default function BaseLayout({ children }: { children: React.ReactNode }) 
                     </div>
                   </SheetContent>
                 </Sheet>
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <div>
-                      <ControlButton 
-                        icon={<Download className="w-4 h-4 text-gray-600 dark:text-neutral-400" />}
-                        hasIndicator
-                        indicatorColor="bg-blue-500"
-                      />
-                    </div>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-[425px] border-0 bg-white/40 dark:bg-neutral-900/40 backdrop-blur-xl shadow-[0_8px_32px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_32px_rgb(0,0,0,0.1)]">
-                    <DialogHeader>
-                      <DialogTitle className="text-xl font-medium text-gray-800 dark:text-neutral-200">Update Available</DialogTitle>
-                      <DialogDescription className="text-gray-600 dark:text-neutral-400">
-                        A new version of WakuAI is available. Would you like to download and install the update?
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="h-[1px] bg-white/20 dark:bg-neutral-800/50 my-4" />
-                    <div className="space-y-3">
-                      <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-neutral-400">
-                        <Download className="w-4 h-4" />
-                        <span>Version 1.2.0</span>
-                      </div>
-                      <p className="text-sm text-gray-600 dark:text-neutral-400">
-                        This update includes new features, improvements, and bug fixes.
-                      </p>
-                    </div>
-                    <DialogFooter className="mt-6">
-                      <Button
-                        variant="ghost"
-                        className="rounded-xl bg-white/40 dark:bg-neutral-900/40 border border-white/20 dark:border-neutral-800/50 backdrop-blur-xl text-gray-600 dark:text-neutral-400 hover:bg-white/60 dark:hover:bg-neutral-900/60"
-                      >
-                        Later
-                      </Button>
-                      <Button
-                        className="rounded-xl bg-blue-500/80 hover:bg-blue-500 text-white border-0 shadow-lg shadow-blue-500/20"
-                      >
-                        Download Update
-                      </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
               </div>
 
               <div className="flex-1" />
 
               {/* Bottom controls */}
               <div className="space-y-3 mb-8">
-                <ControlButton 
-                  icon={
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="w-7 h-7 rounded-full hover:bg-gray-100/50 dark:hover:bg-neutral-800/50 backdrop-blur-sm"
-                    >
-                      <AnimatePresence mode="wait">
-                        
-                          <motion.div
-                            key="sun"
-                            initial={{ opacity: 0, rotate: -180 }}
-                            animate={{ opacity: 1, rotate: 0 }}
-                            exit={{ opacity: 0, rotate: 180 }}
-                            transition={{ duration: 0.2 }}
-                          >
-                            <motion.div
-                              className="relative z-10 flex items-center justify-center"
-                              animate={{
-                                scale: 1,
-                                opacity: 1
-                              }}
-                              transition={{ duration: 0.2 }}
-                            >
-                              <Sun className="h-4 w-4 text-gray-400 hover:text-gray-600 dark:text-neutral-400 dark:hover:text-neutral-200 transition-colors" />
-                            </motion.div>
-                          </motion.div>
-                      </AnimatePresence>
-                    </Button>
-                  }
-                />
                 <Sheet>
                   <SheetTrigger asChild>
                     <div className="w-9 h-9 rounded-full bg-white/40 dark:bg-neutral-900/40 border border-white/20 dark:border-neutral-800/50 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.1)] overflow-hidden cursor-pointer hover:scale-105 transition-transform">
@@ -548,11 +391,6 @@ export default function BaseLayout({ children }: { children: React.ReactNode }) 
                                 <span className="hidden sm:inline">0x71C7...976F</span>
                                 <span className="sm:hidden">0x71C7...6F</span>
                               </span>
-                              {/* Tooltip */}
-                              <div className="absolute left-1/2 -translate-x-1/2 -top-12 px-3 py-2 bg-white/60 dark:bg-neutral-900/60 backdrop-blur-xl rounded-lg border border-white/20 dark:border-neutral-800/50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 whitespace-nowrap">
-                                <span className="text-xs font-mono text-gray-800 dark:text-neutral-200">0x71C7656EC7ab88b098defB751B7401B5f6d8976F</span>
-                                <div className="absolute bottom-[-4px] left-1/2 -translate-x-1/2 w-2 h-2 bg-white/60 dark:bg-neutral-900/60 rotate-45 border-r border-b border-white/20 dark:border-neutral-800/50"></div>
-                              </div>
                             </div>
                           </div>
                           
@@ -560,7 +398,7 @@ export default function BaseLayout({ children }: { children: React.ReactNode }) 
                           <div className="flex flex-col space-y-2">
                             <span className="text-sm text-gray-600 dark:text-neutral-400">Network</span>
                             <div className="flex items-center justify-between p-4 bg-white/20 dark:bg-neutral-800/20 rounded-xl backdrop-blur-sm">
-                              <span className="text-sm font-medium text-gray-800 dark:text-neutral-200">Ethereum Mainnet</span>
+                              <span className="text-sm font-medium text-gray-800 dark:text-neutral-200">Aptos Mainnet</span>
                               <div className="flex items-center space-x-2">
                                 <div className="w-2 h-2 rounded-full bg-emerald-500" />
                                 <span className="text-sm text-emerald-500">Connected</span>
@@ -593,7 +431,7 @@ export default function BaseLayout({ children }: { children: React.ReactNode }) 
                         {/* Disconnect Button */}
                         <Button
                           variant="ghost"
-                          className="w-full rounded-xl bg-white/40 dark:bg-neutral-900/40 border border-white/20 dark:border-neutral-800/50 backdrop-blur-xl text-gray-600 dark:text-neutral-400 hover:bg-white/60 dark:hover:bg-neutral-900/60"
+                          className="w-full rounded-xl bg-blue-500/80 hover:bg-blue-500 text-white border-0 shadow-lg shadow-blue-500/20"
                         >
                           Disconnect Wallet
                         </Button>
