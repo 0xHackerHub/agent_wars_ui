@@ -51,7 +51,7 @@ const LogoSection = () => {
       className="flex items-center space-x-2 px-4 py-3"
       variants={itemVariants}
     >
-      <span className="font-medium text-2xl text-gray-800 dark:text-neutral-50 flex items-center justify-center w-full">AgentWars</span>
+      <span className="font-medium text-2xl text-gray-800 dark:text-neutral-50 flex items-center justify-center w-full">Agent-W</span>
     </motion.div>
   );
 };
