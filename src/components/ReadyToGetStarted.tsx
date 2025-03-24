@@ -1,6 +1,6 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/landingPageButton";
 
 export function ReadyToGetStarted() {
     return (
@@ -38,17 +38,20 @@ export function ReadyToGetStarted() {
                     </p>
                 </div>
                 <div className="flex flex-col sm:flex-row items-center justify-center space-y-2 sm:space-y-0 sm:space-x-2">
-                    <Button
-                        variant="white"
-                        href="/pricing"
-                        size="lg"
-                        className="w-full sm:w-auto"
-                    >
-                        See Docs
-                    </Button>
+                <Button
+  variant="white"
+  href="#"
+  size="lg"
+  className="w-full sm:w-auto relative group"
+>
+  See Docs
+  <span className="absolute left-1/2 -translate-x-1/2 bottom-0 -mb-8 bg-gray-800 text-white text-sm px-3 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+    Coming Soon
+  </span>
+</Button>
                     <Button
                         variant="secondary"
-                        href="/download"
+                        href="/chat"
                         size="lg"
                         className="w-full sm:w-auto"
                     >

@@ -8,7 +8,7 @@ import {
     getPlatformIcon,
     PlatformIcons,
 } from "@/utils/platform";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/landingPageButton";
 import { faAngleRight } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { motion } from "framer-motion";
@@ -46,7 +46,7 @@ export const LandingPage = () => {
                 <div className="relative z-10 px-5 w-full">
                     <div className="mx-auto text-center wrapper wrapper-sm">
                         <Link
-                            href="https://x.com/"
+                            href="https://x.com/aiagentw"
                             target="_blank"
                             className="flex gap-3 transition-opacity duration-300
                  hover:opacity-90 mb-[52px] items-center relative z-[20] px-4 py-2
@@ -55,7 +55,7 @@ export const LandingPage = () => {
                             <p className="text-xs text-white sm:text-sm">
                                 Move AI Hackathon:{" "}
                                 <span className="text-xs font-bold text-blue-100 sm:text-sm">
-                  Agent-Wars
+                  Agent-W
                 </span>
                             </p>
                             <FontAwesomeIcon
@@ -79,7 +79,7 @@ export const LandingPage = () => {
                     <div className="flex flex-col justify-center items-center mb-5 space-y-2 fade-in-up animate-delay-2 sm:flex-row sm:space-y-0 sm:space-x-2">
                         <Button
                             variant="white"
-                            href="/features"
+                            href="#features"
                             size="lg"
                             className="flex justify-center items-center w-full font-medium text-md sm:w-auto"
                         >
@@ -87,7 +87,7 @@ export const LandingPage = () => {
                         </Button>
                         <Button
                             variant="radialblue"
-                            href="/pricing"
+                            href="/chat"
                             size="lg"
                             className="relative z-[20] w-full font-medium text-md sm:w-auto"
                         >

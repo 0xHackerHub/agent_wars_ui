@@ -40,7 +40,7 @@ const features = [
 
 export default function FeaturesGrid() {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-8" id="features">
       {features.map((feature, index) => (
         <FeatureCard key={index} feature={feature} />
       ))}
@@ -52,7 +52,7 @@ function FeatureCard({ feature }: { feature: any }) {
   return (
     <div
       className={`
-        rounded-3xl p-8 relative overflow-hidden
+        rounded-3xl max-w-6xl p-8 relative overflow-hidden
         bg-white/80 backdrop-blur-md
         border border-white/50
         shadow-[0_8px_30px_rgb(0,0,0,0.04)]
