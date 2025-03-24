@@ -8,8 +8,9 @@ import { cn } from '@/lib/utils';
 import { Switch } from "@/components/ui/switch";
 import { ChatSession } from '@/types/chat';
 import { useChat } from '@/hooks/useChat';
-import { addMessageToSession, createChatSession } from '@/utils/chatStorage';
 import ConnectionDetails from '@/components/Connection';
+import { createChatSession } from '@/utils/chatStorage';
+import { getWalletAddress } from '@/utils/getWalletAddress';
 
 const container = {
   hidden: { opacity: 0 },
@@ -46,6 +47,7 @@ interface ChatResponse {
   id: string;
   response: string;
   error?: string;
+  sessionId?: string;
 }
 
 interface NewChatScreenProps {
@@ -59,6 +61,23 @@ const NewChatScreen: React.FC<NewChatScreenProps> = ({ currentSession, onSession
   const [isFocused, setIsFocused] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [userAddress, setUserAddress] = useState<string>('');
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(currentSession?.id || null);
+
+  // Get wallet address on component mount
+  useEffect(() => {
+    // Get the wallet address on client-side only
+    const address = getWalletAddress();
+    console.log('Using wallet address:', address);
+    setUserAddress(address);
+  }, []);
+
+  // Update session ID if currentSession changes
+  useEffect(() => {
+    if (currentSession?.id && currentSession.id !== activeSessionId) {
+      setActiveSessionId(currentSession.id);
+    }
+  }, [currentSession, activeSessionId]);
 
   const handleSendMessage = async () => {
     if (!inputValue.trim() || isLoading) return;
@@ -74,14 +93,24 @@ const NewChatScreen: React.FC<NewChatScreenProps> = ({ currentSession, onSession
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/chat', {
+      const serverUrl = 'http://localhost:8000';
+      console.log(`Sending message to ${serverUrl}/api/chat`);
+      
+      // Use the wallet address if available, otherwise fall back to session ID or anonymous
+      const address = userAddress || currentSession?.id || 'anonymous';
+      console.log('Using address for chat message:', address);
+      
+      const response = await fetch(`${serverUrl}/api/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           message: inputValue,
-          userAddress: currentSession?.id || 'anonymous',
+          userAddress: address,
+          role: 'user',
+          // Send the active session ID if we have one
+          sessionId: activeSessionId
         }),
       });
 
@@ -98,9 +127,16 @@ const NewChatScreen: React.FC<NewChatScreenProps> = ({ currentSession, onSession
           type: 'assistant'
         }]);
 
-        if (!currentSession) {
-          const newSession = await createChatSession(inputValue);
-          onSessionCreate(newSession);
+        // Store the session ID from the response
+        if (data.sessionId && !activeSessionId) {
+          setActiveSessionId(data.sessionId);
+          
+          // Create a new session if we don't have one yet
+          if (!currentSession) {
+            const newSession = await createChatSession(inputValue);
+            newSession.id = data.sessionId; // Use the server-side session ID
+            onSessionCreate(newSession);
+          }
         }
       } else {
         throw new Error('Invalid response format');

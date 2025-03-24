@@ -62,13 +62,13 @@ const InferenceModeNav = ({
   activeRoute,
   userAddress,
   currentSession,
-  onSessionCreate
+  onSessionSelect
 }: { 
   setActiveRoute: (route: Route) => void;
   activeRoute: Route;
   userAddress: string | null;
   currentSession: ChatSession | null;
-  onSessionCreate: (session: ChatSession) => void;
+  onSessionSelect: (sessionIdOrSession: string | ChatSession) => void;
 }) => {
   return (
     <motion.div
@@ -90,19 +90,6 @@ const InferenceModeNav = ({
         <Plus className="mr-3 h-4 w-4" />
         New chat
       </Button>
-
-      {/* Chat History */}
-      {userAddress && (
-        <ChatHistory
-          userAddress={userAddress}
-          activeChat={currentSession?.id || null}
-          onChatSelect={(chatId) => {
-            // Load the selected chat
-            setActiveRoute('new-chat');
-            onSessionCreate({ id: chatId, messages: [], title: '', createdAt: new Date().getTime(), updatedAt: new Date().getTime() });
-          }}
-        />
-      )}
 
       <div className="mt-4">
         <div onClick={() => setActiveRoute('new-agent')}>
@@ -137,6 +124,18 @@ const InferenceModeNav = ({
             currentRoute={activeRoute}
           />
         </div>
+        {/* Chat History */}
+      {userAddress && (
+        <ChatHistory
+          userAddress={userAddress}
+          activeChat={currentSession?.id || null}
+          onChatSelect={(chatId) => {
+            // Load the selected chat
+            setActiveRoute('new-chat');
+            onSessionSelect(chatId);
+          }}
+        />
+      )}
       </div>
     </motion.div>
   );
@@ -207,9 +206,59 @@ export default function BaseLayout({ children }: { children: React.ReactNode }) 
   }, []);
 
   // Function to handle session selection
-  const handleSessionSelect = (session: ChatSession) => {
-    setActiveSession(session);
-    setActiveRoute('new-chat');
+  const handleSessionSelect = (sessionIdOrSession: string | ChatSession) => {
+    // If we received a ChatSession object directly, use it
+    if (typeof sessionIdOrSession !== 'string') {
+      setActiveSession(sessionIdOrSession);
+      setActiveRoute('new-chat');
+      return;
+    }
+    
+    // Otherwise, fetch the session by ID
+    const sessionId = sessionIdOrSession;
+    
+    // Fetch the session details and associated messages
+    const fetchSession = async () => {
+      try {
+        // First, fetch the session details
+        const sessionResponse = await fetch(`http://localhost:8000/api/chat/sessions?userAddress=${address}`);
+        const sessions = await sessionResponse.json();
+        const selectedSession = sessions.find((s: any) => s.id === sessionId);
+        
+        if (selectedSession) {
+          // Create a session object with the required properties
+          const session: ChatSession = {
+            id: selectedSession.id,
+            title: selectedSession.title,
+            messages: [], // Will be populated below
+            createdAt: new Date(selectedSession.createdAt).getTime(),
+            updatedAt: new Date(selectedSession.updatedAt).getTime()
+          };
+          
+          // Then fetch the messages for this session
+          const messagesResponse = await fetch(`http://localhost:8000/api/chat?userAddress=${address}&sessionId=${sessionId}`);
+          const messages = await messagesResponse.json();
+          
+          // Set the active session with its messages
+          setActiveSession({
+            ...session,
+            messages: messages.map((msg: any) => ({
+              id: msg.id,
+              content: msg.message,
+              sender: msg.response === msg.message ? 'assistant' : 'user',
+              timestamp: new Date(msg.createdAt).getTime()
+            }))
+          });
+          
+          // Set the active route to chat
+          setActiveRoute('new-chat');
+        }
+      } catch (error) {
+        console.error('Error fetching session:', error);
+      }
+    };
+    
+    fetchSession();
   };
 
   // Function to handle new chat
@@ -229,7 +278,7 @@ export default function BaseLayout({ children }: { children: React.ReactNode }) 
       case 'new-chat':
         return <NewChatScreen 
         currentSession={activeSession} 
-        onSessionCreate={handleSessionSelect}
+        onSessionCreate={setActiveSession}
         isNetwork={isNetwork}
       />;
       case 'new-agent':
@@ -243,7 +292,7 @@ export default function BaseLayout({ children }: { children: React.ReactNode }) 
         default:
           return <NewChatScreen 
             currentSession={activeSession} 
-            onSessionCreate={handleSessionSelect}
+            onSessionCreate={setActiveSession}
             isNetwork={isNetwork}
           />;
     }
@@ -272,7 +321,7 @@ export default function BaseLayout({ children }: { children: React.ReactNode }) 
               activeRoute={activeRoute}
               userAddress={address?.toString() ?? null}
               currentSession={activeSession}
-              onSessionCreate={handleSessionSelect}
+              onSessionSelect={handleSessionSelect}
             />
             </motion.div>
           </motion.div>

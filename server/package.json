@@ -1,0 +1,31 @@
+{
+  "name": "move-hackathon-server",
+  "version": "1.0.0",
+  "description": "Express server for Move Hackathon",
+  "main": "dist/server.js",
+  "scripts": {
+    "dev": "NODE_TLS_REJECT_UNAUTHORIZED=0 tsx watch src/index.ts",
+    "db:migrate": "tsx --env-file=.env src/db/migrate.ts",
+    "db:generate": "drizzle-kit generate",
+    "db:push": "drizzle-kit push",
+    "db:studio": ""
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "drizzle-orm": "^0.41.0",
+    "express": "^4.21.2",
+    "openai": "^4.89.0",
+    "pg": "^8.11.3",
+    "postgres": "^3.4.5",
+    "tsx": "^4.19.3"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.1",
+    "@types/node": "^22.13.13",
+    "@types/pg": "^8.11.11",
+    "drizzle-kit": "^0.30.5",
+    "typescript": "^5.8.2"
+  }
+}

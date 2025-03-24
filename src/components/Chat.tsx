@@ -1,5 +1,7 @@
+"use client"
 import { useState, useEffect, useRef } from 'react';
 import { Send } from 'lucide-react';
+import { useChat } from '@/hooks/useChat';
 
 interface Message {
   id: string;
@@ -14,25 +16,10 @@ interface ChatProps {
 
 export function Chat({ userAddress }: ChatProps) {
   const [input, setInput] = useState('');
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (userAddress) {
-      fetchChatHistory();
-    }
-  }, [userAddress]);
-
-  const fetchChatHistory = async () => {
-    try {
-      const response = await fetch(`/api/chat/history?userAddress=${userAddress}`);
-      const data = await response.json();
-      setMessages(data);
-    } catch (error) {
-      console.error('Failed to fetch chat history:', error);
-    }
-  };
+  
+  // Use the custom hook that connects directly to the Express server
+  const { messages, isLoading, sendMessage } = useChat(userAddress);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -46,33 +33,13 @@ export function Chat({ userAddress }: ChatProps) {
     e.preventDefault();
     if (!input.trim() || !userAddress) return;
 
-    setIsLoading(true);
     const userMessage = input;
     setInput('');
 
     try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          message: userMessage,
-          userAddress,
-        }),
-      });
-
-      const data = await response.json();
-      setMessages(prev => [...prev, {
-        id: data.id,
-        message: userMessage,
-        response: data.response,
-        createdAt: new Date().toISOString(),
-      }]);
+      await sendMessage(userMessage);
     } catch (error) {
       console.error('Failed to send message:', error);
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -86,11 +53,13 @@ export function Chat({ userAddress }: ChatProps) {
                 <p className="text-sm">{msg.message}</p>
               </div>
             </div>
-            <div className="flex items-start gap-2 justify-end">
-              <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-2 max-w-[80%]">
-                <p className="text-sm">{msg.response}</p>
+            {msg.response && (
+              <div className="flex items-start gap-2 justify-end">
+                <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-2 max-w-[80%]">
+                  <p className="text-sm">{msg.response}</p>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         ))}
         <div ref={messagesEndRef} />
