@@ -33,7 +33,7 @@ export function ChatHistory({ userAddress, activeChat, onChatSelect }: ChatHisto
       try {
         // Convert to string if it's an AccountAddress
         const addressStr = typeof userAddress === 'string' ? userAddress : userAddress.toString();
-        const response = await axios.get(`http://localhost:8000/api/chat/sessions?userAddress=${addressStr}`);
+        const response = await axios.get(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/chat/sessions?userAddress=${addressStr}`);
         setSessions(response.data);
       } catch (error) {
         console.error('Error fetching chat sessions:', error);

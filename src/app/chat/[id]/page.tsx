@@ -33,7 +33,7 @@ export default function ChatViewPage() {
         }
         
         // First, fetch the session details
-        const sessionResponse = await fetch(`http://localhost:8000/api/chat/sessions?userAddress=${userAddress}`);
+        const sessionResponse = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/chat/sessions?userAddress=${userAddress}`);
         if (!sessionResponse.ok) {
           throw new Error("Failed to fetch sessions");
         }
@@ -52,7 +52,7 @@ export default function ChatViewPage() {
           };
           
           // Then fetch the messages for this session
-          const messagesResponse = await fetch(`http://localhost:8000/api/chat?userAddress=${userAddress}&sessionId=${params.id}`);
+          const messagesResponse = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/chat?userAddress=${userAddress}&sessionId=${params.id}`);
           if (!messagesResponse.ok) {
             throw new Error("Failed to fetch messages");
           }

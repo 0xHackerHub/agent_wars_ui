@@ -127,7 +127,7 @@ const NewChatScreen: React.FC<NewChatScreenProps> = ({ currentSession, onSession
     setIsLoading(true);
 
     try {
-      const serverUrl = 'http://localhost:8000';
+      const serverUrl = `${process.env.NEXT_PUBLIC_SERVER_URL}`;
       console.log(`Sending message to ${serverUrl}/api/chat`);
       
       // Use the wallet address if available, otherwise fall back to session ID or anonymous

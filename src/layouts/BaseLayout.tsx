@@ -269,7 +269,7 @@ export default function BaseLayout({ children }: { children: React.ReactNode }) 
     const fetchSession = async () => {
       try {
         // First, fetch the session details
-        const sessionResponse = await fetch(`http://localhost:8000/api/chat/sessions?userAddress=${addressStr}`);
+        const sessionResponse = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/chat/sessions?userAddress=${addressStr}`);
         const sessions = await sessionResponse.json();
         const selectedSession = sessions.find((s: any) => s.id === sessionId);
         
@@ -284,7 +284,7 @@ export default function BaseLayout({ children }: { children: React.ReactNode }) 
           };
           
           // Then fetch the messages for this session
-          const messagesResponse = await fetch(`http://localhost:8000/api/chat?userAddress=${addressStr}&sessionId=${sessionId}`);
+          const messagesResponse = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/chat?userAddress=${addressStr}&sessionId=${sessionId}`);
           const messages = await messagesResponse.json();
           
           // Set the active session with its messages

@@ -10,7 +10,7 @@ interface Message {
 }
 
 // Use the server URL directly
-const SERVER_URL = 'http://localhost:8000';
+const SERVER_URL = `${process.env.NEXT_PUBLIC_SERVER_URL}`;
 
 export const useChat = (userAddress: string | null) => {
   const [messages, setMessages] = useState<Message[]>([]);
