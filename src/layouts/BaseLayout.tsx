@@ -9,9 +9,9 @@ import { NewChatScreen, NewAgentScreen, BrowseAgentsScreen, ConnectionsScreen, O
 import { cn } from "@/lib/utils";
 import { ChatSession } from "@/types/chat";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import theme from "tailwindcss/defaultTheme";
+import { useWallet } from "@/hooks/useWallet";
+import { truncateAddress } from "@aptos-labs/ts-sdk";
+import { ChatHistory } from "@/components/ChatHistory";
 
 // Animation variants
 const sidebarVariants = {
@@ -59,10 +59,16 @@ const LogoSection = () => {
 // Component for inference mode navigation
 const InferenceModeNav = ({ 
   setActiveRoute,
-  activeRoute
+  activeRoute,
+  userAddress,
+  currentSession,
+  onSessionCreate
 }: { 
   setActiveRoute: (route: Route) => void;
   activeRoute: Route;
+  userAddress: string | null;
+  currentSession: ChatSession | null;
+  onSessionCreate: (session: ChatSession) => void;
 }) => {
   return (
     <motion.div
@@ -84,37 +90,53 @@ const InferenceModeNav = ({
         <Plus className="mr-3 h-4 w-4" />
         New chat
       </Button>
-      <div onClick={() => setActiveRoute('new-agent')}>
-        <NavItem 
-          icon={<Bot size={16} />} 
-          label="New agent" 
-          route="new-agent"
-          currentRoute={activeRoute}
+
+      {/* Chat History */}
+      {userAddress && (
+        <ChatHistory
+          userAddress={userAddress}
+          activeChat={currentSession?.id || null}
+          onChatSelect={(chatId) => {
+            // Load the selected chat
+            setActiveRoute('new-chat');
+            onSessionCreate({ id: chatId, messages: [], title: '', createdAt: new Date().getTime(), updatedAt: new Date().getTime() });
+          }}
         />
-      </div>
-      <div onClick={() => setActiveRoute('browse-agents')}>
-        <NavItem 
-          icon={<FolderSearch size={16} />} 
-          label="Browse agents" 
-          route="browse-agents"
-          currentRoute={activeRoute}
-        />
-      </div>
-      <div onClick={() => setActiveRoute('connections')}>
-        <NavItem 
-          icon={<Link2 size={16} />} 
-          label="Connections" 
-          route="connections"
-          currentRoute={activeRoute}
-        />
-      </div>
-      <div onClick={() => setActiveRoute('models')}>
-        <NavItem 
-          icon={<Box size={16} />} 
-          label="Models" 
-          route="models"
-          currentRoute={activeRoute}
-        />
+      )}
+
+      <div className="mt-4">
+        <div onClick={() => setActiveRoute('new-agent')}>
+          <NavItem 
+            icon={<Bot size={16} />} 
+            label="New agent" 
+            route="new-agent"
+            currentRoute={activeRoute}
+          />
+        </div>
+        <div onClick={() => setActiveRoute('browse-agents')}>
+          <NavItem 
+            icon={<FolderSearch size={16} />} 
+            label="Browse agents" 
+            route="browse-agents"
+            currentRoute={activeRoute}
+          />
+        </div>
+        <div onClick={() => setActiveRoute('connections')}>
+          <NavItem 
+            icon={<Link2 size={16} />} 
+            label="Connections" 
+            route="connections"
+            currentRoute={activeRoute}
+          />
+        </div>
+        <div onClick={() => setActiveRoute('models')}>
+          <NavItem 
+            icon={<Box size={16} />} 
+            label="Models" 
+            route="models"
+            currentRoute={activeRoute}
+          />
+        </div>
       </div>
     </motion.div>
   );
@@ -164,6 +186,7 @@ const ControlButton = ({
 );
 
 export default function BaseLayout({ children }: { children: React.ReactNode }) {
+  const { isConnected, address, balance, tokens } = useWallet();
   const [activeRoute, setActiveRoute] = useState<Route>('new-chat');
   const [isNetwork, setIsNetwork] = useState(false);
   const [activeSession, setActiveSession] = useState<ChatSession | null>(null);
@@ -174,6 +197,14 @@ export default function BaseLayout({ children }: { children: React.ReactNode }) 
     setActiveSession(null);
     setActiveRoute(isNetwork ? 'configuration' : 'new-chat');
   }, [isNetwork]);
+
+  useEffect(() => {
+    // Try to connect with private key from environment variable if available
+    const privateKey = process.env.NEXT_PUBLIC_WALLET_PRIVATE_KEY;
+    if (privateKey && !isConnected) {
+      // Removed manual connection logic
+    }
+  }, []);
 
   // Function to handle session selection
   const handleSessionSelect = (session: ChatSession) => {
@@ -239,6 +270,9 @@ export default function BaseLayout({ children }: { children: React.ReactNode }) 
             <InferenceModeNav 
               setActiveRoute={setActiveRoute}
               activeRoute={activeRoute}
+              userAddress={address?.toString() ?? null}
+              currentSession={activeSession}
+              onSessionCreate={handleSessionSelect}
             />
             </motion.div>
           </motion.div>
@@ -376,8 +410,17 @@ export default function BaseLayout({ children }: { children: React.ReactNode }) 
                             <img src="https://api.dicebear.com/9.x/glass/svg?seed=7" alt="avatar" className="w-full h-full" />
                           </div>
                           <div className="flex items-center space-x-2 px-4 py-2 bg-white/20 dark:bg-neutral-800/20 rounded-full backdrop-blur-sm">
-                            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                            <span className="text-sm font-medium text-emerald-500">Connected</span>
+                            {isConnected ? (
+                              <>
+                                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                <span className="text-sm font-medium text-emerald-500">Connected</span>
+                              </>
+                            ) : (
+                              <>
+                                <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                                <span className="text-sm font-medium text-red-500">Private Key Required</span>
+                              </>
+                            )}
                           </div>
                         </div>
 
@@ -388,8 +431,8 @@ export default function BaseLayout({ children }: { children: React.ReactNode }) 
                             <div className="group relative flex items-center space-x-2 p-4 bg-white/20 dark:bg-neutral-800/20 rounded-xl backdrop-blur-sm">
                               <span className="text-sm font-medium text-gray-800 dark:text-neutral-200 font-mono truncate">
                                 {/* Show different lengths based on screen size */}
-                                <span className="hidden sm:inline">0x71C7...976F</span>
-                                <span className="sm:hidden">0x71C7...6F</span>
+                                <span className="hidden sm:inline">{address ? `${truncateAddress(address.toString(), 4)}` : "Not Connected"}</span>
+                                <span className="sm:hidden">{address ? `${truncateAddress(address.toString(), 10)}` : "Not Connected"}</span>
                               </span>
                             </div>
                           </div>
@@ -401,39 +444,42 @@ export default function BaseLayout({ children }: { children: React.ReactNode }) 
                               <span className="text-sm font-medium text-gray-800 dark:text-neutral-200">Aptos Mainnet</span>
                               <div className="flex items-center space-x-2">
                                 <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                                <span className="text-sm text-emerald-500">Connected</span>
+                                <span className="text-sm text-emerald-500">{isConnected ? "Connected" : "Not Connected"}</span>
                               </div>
                             </div>
                           </div>
 
-                          {/* Transaction History */}
+                          {/* Token List */}
                           <div className="flex flex-col space-y-2">
-                            <span className="text-sm text-gray-600 dark:text-neutral-400">Recent Transactions</span>
+                            <span className="text-sm text-gray-600 dark:text-neutral-400">Token List</span>
                             <div className="space-y-2">
-                              <div className="flex items-center justify-between p-4 bg-white/20 dark:bg-neutral-800/20 rounded-xl backdrop-blur-sm">
-                                <div className="flex items-center space-x-3">
-                                  <Download className="w-4 h-4 text-blue-500" />
-                                  <span className="text-sm font-medium text-gray-800 dark:text-neutral-200">Received</span>
+                              {tokens.length > 0 ? (
+                                tokens.slice(0, 3).map((token, index) => (
+                                  <div key={index} className="flex items-center justify-between p-4 bg-white/20 dark:bg-neutral-800/20 rounded-xl backdrop-blur-sm">
+                                    <div className="flex items-center space-x-3">
+                                      <span className="text-sm font-medium text-gray-800 dark:text-neutral-200">{token.name}</span>
+                                    </div>
+                                    <span className="text-sm text-gray-600 dark:text-neutral-400">{token.balance}</span>
+                                  </div>
+                                ))
+                              ) : (
+                                <div className="flex items-center justify-between p-4 bg-white/20 dark:bg-neutral-800/20 rounded-xl backdrop-blur-sm">
+                                  <div className="flex items-center space-x-3">
+                                    <span className="text-sm font-medium text-gray-800 dark:text-neutral-200">APT</span>
+                                  </div>
+                                  <span className="text-sm text-gray-600 dark:text-neutral-400">0</span>
                                 </div>
-                                <span className="text-sm text-gray-600 dark:text-neutral-400">0.1 ETH</span>
-                              </div>
-                              <div className="flex items-center justify-between p-4 bg-white/20 dark:bg-neutral-800/20 rounded-xl backdrop-blur-sm">
-                                <div className="flex items-center space-x-3">
-                                  <Download className="w-4 h-4 text-blue-500 rotate-180" />
-                                  <span className="text-sm font-medium text-gray-800 dark:text-neutral-200">Sent</span>
-                                </div>
-                                <span className="text-sm text-gray-600 dark:text-neutral-400">0.05 ETH</span>
-                              </div>
+                              )}
                             </div>
                           </div>
                         </div>
 
-                        {/* Disconnect Button */}
+                        {/* Wallet Status Button */}
                         <Button
                           variant="ghost"
                           className="w-full rounded-xl bg-blue-500/80 hover:bg-blue-500 text-white border-0 shadow-lg shadow-blue-500/20"
                         >
-                          Disconnect Wallet
+                          {`Aptos Balance: ${balance} APT`}
                         </Button>
                       </div>
                     </div>

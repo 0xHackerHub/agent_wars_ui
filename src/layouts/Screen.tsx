@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Shuffle, Grid, FileText, Activity, Pause, Network, Play, Box, Bot } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,172 +35,157 @@ const item = {
   }
 };
 
+interface Message {
+  id: string;
+  text: string;
+  type: 'user' | 'assistant';
+  error?: boolean;
+}
+
+interface ChatResponse {
+  id: string;
+  response: string;
+  error?: string;
+}
+
 interface NewChatScreenProps {
   currentSession: ChatSession | null;
   onSessionCreate: (session: ChatSession) => void;
   isNetwork: boolean;
 }
 
-// Inference Mode Screens
 const NewChatScreen: React.FC<NewChatScreenProps> = ({ currentSession, onSessionCreate, isNetwork }) => {
   const [inputValue, setInputValue] = useState('');
   const [isFocused, setIsFocused] = useState(false);
-  const { sendMessage, messages, clearMessages } = useChat();
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
   const handleSendMessage = async () => {
-    if (!inputValue.trim()) return;
-    if (!isNetwork) {
-      // Inference mode - create session first if needed
-      if (!currentSession) {
-        const newSession = await createChatSession(inputValue);
-        onSessionCreate(newSession);
+    if (!inputValue.trim() || isLoading) return;
+
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      text: inputValue,
+      type: 'user'
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    setInputValue('');
+    setIsLoading(true);
+
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: inputValue,
+          userAddress: currentSession?.id || 'anonymous',
+        }),
+      });
+
+      const data: ChatResponse = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to get response');
       }
-      // Send message through Waku
-      const success = await sendMessage(inputValue);
-      if (success) {
-        setInputValue('');
-      }
-    } else {
-      // Operator mode - use existing mock functionality
-      try {
+
+      if (data.response) {
+        setMessages(prev => [...prev, {
+          id: data.id || Date.now().toString(),
+          text: data.response,
+          type: 'assistant'
+        }]);
+
         if (!currentSession) {
           const newSession = await createChatSession(inputValue);
           onSessionCreate(newSession);
-
-          setTimeout(async () => {
-            try {
-              const updatedSession = await addMessageToSession(
-                newSession.id,
-                "I'm here to help! What would you like to know?",
-                'assistant'
-              );
-              onSessionCreate(updatedSession);
-            } catch (error) {
-              console.error('Error sending assistant response:', error);
-            }
-          }, 1000);
-        } else {
-          // Add message to existing session
-          const updatedSession = await addMessageToSession(currentSession.id, inputValue, 'user');
-          onSessionCreate(updatedSession);
-
-          // Add mock assistant response after a delay
-          setTimeout(async () => {
-            try {
-              const responseSession = await addMessageToSession(
-                updatedSession.id,
-                "I understand your message. How can I assist you further?",
-                'assistant'
-              );
-              onSessionCreate(responseSession);
-            } catch (error) {
-              console.error('Error sending assistant response:', error);
-            }
-          }, 1000);
         }
-        setInputValue('');
-      } catch (error) {
-        console.error('Error sending message:', error);
+      } else {
+        throw new Error('Invalid response format');
       }
+    } catch (error) {
+      console.error('Error sending message:', error);
+      setMessages(prev => [...prev, {
+        id: Date.now().toString(),
+        text: error instanceof Error ? error.message : 'An error occurred while processing your message',
+        type: 'assistant',
+        error: true
+      }]);
+    } finally {
+      setIsLoading(false);
     }
   };
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      void handleSendMessage();
-    }
-  };
+
   return (
-    <div className="flex flex-col h-full relative">
-      {/* Messages container */}
-      <div className="flex-1 overflow-auto rounded-3xl">
-        <div className="max-w-[800px] mx-auto px-8 py-16">
-          {/* Greeting */}
-          <motion.div 
-            className="mb-12"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <motion.h1 
-              className="text-[40px] leading-tight font-medium text-gray-900 dark:text-neutral-50 mb-3"
+    <div className="flex flex-col h-full">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <AnimatePresence>
+          {messages.length === 0 && (
+            <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="text-center py-8"
             >
-              Hello,
-            </motion.h1>
-            <motion.p 
-              className="text-[26px] leading-tight text-gray-600 dark:text-neutral-400"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.3 }}
-            >
-              How can I help you to make your Move?
-            </motion.p>
-          </motion.div>
-
-          {/* Chat messages container */}
-          <div className="space-y-6 mb-24">
-            <div className="bg-white/40 dark:bg-neutral-900/40 border border-white/20 dark:border-neutral-800/50 backdrop-blur-xl rounded-2xl p-4">
-              <p className="text-gray-800 dark:text-neutral-200">Welcome! How can I assist you today?</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Input box */}
-      <div className="absolute bottom-0 left-0 right-0 z-20">
-        <div className="py-4">
-          <div className="max-w-[800px] mx-auto px-8">
-            <motion.div 
-              className="bg-white/40 dark:bg-neutral-900/40 border border-white/20 dark:border-neutral-800/50 backdrop-blur-xl rounded-2xl flex items-center shadow-[0_8px_32px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_32px_rgb(0,0,0,0.1)]"
-              whileHover={{ scale: 1.01 }}
-              transition={{ type: "spring", stiffness: 400, damping: 30 }}
-            >
-              <div className="flex-1 relative">
-              <Input
-                  type="text"
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  onFocus={() => setIsFocused(true)}
-                  onBlur={() => setIsFocused(false)}
-                  onKeyDown={handleKeyDown}
-                  className="flex-1 bg-transparent border-0 rounded-full h-12 px-6 text-sm text-gray-800 dark:text-neutral-200 focus-visible:ring-0 focus-visible:ring-offset-0"
-                />
-                {!inputValue && !isFocused && (
-                <div className="absolute left-6 top-1/2 -translate-y-1/2 pointer-events-none text-sm text-gray-500 dark:text-neutral-500">
-                  <TypeAnimation
-                    sequence={[
-                      'Ask me about joule finance...',
-                      2000,
-                      'Ask me about merkle trade...',
-                      2000,
-                      'Ask me about aptos...',
-                      2000,
-                      'Ask me to swap tokens...',
-                      2000,
-                    ]}
-                    wrapper="span"
-                    speed={50}
-                    repeat={Infinity}
-                  />
-                </div>
-                )}
-              </div>
-              <div className="pr-2">
-                <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
-                  <Button 
-                    size="icon"
-                    className="rounded-full w-8 h-8 bg-white dark:bg-neutral-900 hover:bg-neutral-100/50 dark:hover:bg-neutral-800"
-                  >
-                    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-gray-700 dark:text-neutral-400">
-                      <path d="M8.14645 3.14645C8.34171 2.95118 8.65829 2.95118 8.85355 3.14645L12.8536 7.14645C13.0488 7.34171 13.0488 7.65829 12.8536 7.85355L8.85355 11.8536C8.65829 12.0488 8.34171 12.0488 8.14645 11.8536C7.95118 11.6583 7.95118 11.3417 8.14645 11.1464L11.2929 8H2.5C2.22386 8 2 7.77614 2 7.5C2 7.22386 2.22386 7 2.5 7H11.2929L8.14645 3.85355C7.95118 3.65829 7.95118 3.34171 8.14645 3.14645Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path>
-                    </svg>
-                  </Button>
-                </motion.div>
-              </div>
+              <h2 className="text-2xl font-bold mb-2">Hello,</h2>
+              <p className="text-gray-600">How can I help you to make your Move?</p>
             </motion.div>
-          </div>
+          )}
+          {messages.map((message) => (
+            <motion.div
+              key={message.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className={cn(
+                "p-4 rounded-lg max-w-[80%]",
+                message.type === 'user' 
+                  ? "bg-primary text-primary-foreground ml-auto" 
+                  : message.error
+                    ? "bg-red-100 text-red-800 mr-auto"
+                    : "bg-muted mr-auto"
+              )}
+            >
+              {message.text}
+            </motion.div>
+          ))}
+          {isLoading && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="bg-muted p-4 rounded-lg max-w-[80%] mr-auto"
+            >
+              <TypeAnimation
+                sequence={['Thinking...', 1000, 'Processing...', 1000]}
+                repeat={Infinity}
+                style={{ fontSize: '1em' }}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+      <div className="p-4 border-t">
+        <div className="flex gap-2">
+          <Input
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+            placeholder="Type your message..."
+            className={cn(
+              "flex-1",
+              isFocused && "ring-2 ring-primary"
+            )}
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setIsFocused(false)}
+            disabled={isLoading}
+          />
+          <Button 
+            onClick={handleSendMessage}
+            disabled={!inputValue.trim() || isLoading}
+          >
+            Send
+          </Button>
         </div>
       </div>
     </div>
