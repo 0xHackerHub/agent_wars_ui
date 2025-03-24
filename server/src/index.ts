@@ -1,5 +1,5 @@
 import express, { RequestHandler } from 'express';
-import cors from 'cors';
+import cors, { CorsOptions } from 'cors';
 import { db } from './db/client';
 import { wallets, chatHistory, chatSessions } from './db/schema';
 import { eq } from 'drizzle-orm';
@@ -10,7 +10,17 @@ config();
 const app = express();
 const port = 8000;
 
-app.use(cors());
+export const corsOptions: CorsOptions = {
+  origin: [
+    "agent-w.xyz",
+    "http://localhost:3000",
+  ], // Replace with your frontend URL
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+  optionsSuccessStatus: 200,
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // Health check endpoint
