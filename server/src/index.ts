@@ -12,7 +12,7 @@ const port = 8000;
 
 export const corsOptions: CorsOptions = {
   origin: [
-    "agent-w.xyz",
+    "https://www.agent-w.xyz",
     "http://localhost:3000",
   ], // Replace with your frontend URL
   credentials: true,
