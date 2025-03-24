@@ -1,0 +1,20 @@
+FROM node:20.11
+
+# ARG and ENV setup
+ARG SETTINGS
+ENV API=/home/app/api
+ENV SETTINGS=${SETTINGS}
+
+# Create app directory
+RUN mkdir -p ${API}
+WORKDIR ${API}
+
+# Install dependencies
+COPY package.json ./
+RUN npm install
+
+# Copy application code
+COPY . .
+
+# Command to run migrations and start the app
+CMD ["sh", "-c", "npm run start"]

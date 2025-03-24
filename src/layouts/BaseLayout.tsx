@@ -12,6 +12,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { useWallet } from "@/hooks/useWallet";
 import { truncateAddress } from "@aptos-labs/ts-sdk";
 import { ChatHistory } from "@/components/ChatHistory";
+import { AccountAddress } from "@aptos-labs/ts-sdk";
 
 // Animation variants
 const sidebarVariants = {
@@ -62,14 +63,22 @@ const InferenceModeNav = ({
   activeRoute,
   userAddress,
   currentSession,
-  onSessionSelect
+  onSessionSelect,
+  setActiveSession
 }: { 
   setActiveRoute: (route: Route) => void;
   activeRoute: Route;
-  userAddress: string | null;
+  userAddress: string | AccountAddress | null;
   currentSession: ChatSession | null;
-  onSessionSelect: (sessionIdOrSession: string | ChatSession) => void;
+  onSessionSelect: (sessionIdOrSession: string | ChatSession | null) => void;
+  setActiveSession: (session: ChatSession | null) => void;
 }) => {
+  // Function to handle session selection at the component level
+  const handleSessionSelect = (chatId: string) => {
+    // Call the parent's session select handler
+    onSessionSelect(chatId);
+  };
+
   return (
     <motion.div
       className="space-y-1"
@@ -85,7 +94,11 @@ const InferenceModeNav = ({
             ? "text-gray-800 dark:text-gray-100 border-gray-200 dark:border-neutral-800"
             : ""
         )}
-        onClick={() => setActiveRoute('new-chat')}
+        onClick={() => {
+          setActiveRoute('new-chat');
+          // Reset active session for new chat
+          setActiveSession(null);
+        }}
       >
         <Plus className="mr-3 h-4 w-4" />
         New chat
@@ -131,8 +144,7 @@ const InferenceModeNav = ({
           activeChat={currentSession?.id || null}
           onChatSelect={(chatId) => {
             // Load the selected chat
-            setActiveRoute('new-chat');
-            onSessionSelect(chatId);
+            handleSessionSelect(chatId);
           }}
         />
       )}
@@ -190,6 +202,32 @@ export default function BaseLayout({ children }: { children: React.ReactNode }) 
   const [isNetwork, setIsNetwork] = useState(false);
   const [activeSession, setActiveSession] = useState<ChatSession | null>(null);
   const [isRunning, setIsRunning] = useState(false);
+  const [sessionLogs, setSessionLogs] = useState<{message: string, type: 'info' | 'user' | 'agent' | 'error'}[]>([]); // Track logs with type
+  const [hasNewLogs, setHasNewLogs] = useState(false); // Track if there are unread logs
+  
+  // Log an event to the session logs
+  const logEvent = (message: string, type: 'info' | 'user' | 'agent' | 'error' = 'info') => {
+    const timestamp = new Date().toLocaleTimeString();
+    const formattedMessage = type === 'user' ? `User: ${message}` : 
+                            type === 'agent' ? `Agent-w: ${message}` : 
+                            type === 'error' ? `Error: ${message}` : message;
+    
+    setSessionLogs(prev => [...prev, {
+      message: `[${timestamp}] ${formattedMessage}`,
+      type
+    }]);
+    
+    // Indicate there are new logs
+    setHasNewLogs(true);
+  };
+  
+  // Add initialization log when session changes
+  useEffect(() => {
+    if (activeSession) {
+      setSessionLogs([]); // Clear logs when session changes
+      logEvent('Agent initialized and ready to assist with Move operations.');
+    }
+  }, [activeSession?.id]);
 
   useEffect(() => {
     // Reset session and route when mode changes
@@ -206,7 +244,14 @@ export default function BaseLayout({ children }: { children: React.ReactNode }) 
   }, []);
 
   // Function to handle session selection
-  const handleSessionSelect = (sessionIdOrSession: string | ChatSession) => {
+  const handleSessionSelect = (sessionIdOrSession: string | ChatSession | null) => {
+    // If null is passed, create a new chat
+    if (sessionIdOrSession === null) {
+      setActiveSession(null);
+      setActiveRoute('new-chat');
+      return;
+    }
+    
     // If we received a ChatSession object directly, use it
     if (typeof sessionIdOrSession !== 'string') {
       setActiveSession(sessionIdOrSession);
@@ -217,11 +262,14 @@ export default function BaseLayout({ children }: { children: React.ReactNode }) 
     // Otherwise, fetch the session by ID
     const sessionId = sessionIdOrSession;
     
+    // Format address to string if it's an AccountAddress
+    const addressStr = address ? address.toString() : null;
+    
     // Fetch the session details and associated messages
     const fetchSession = async () => {
       try {
         // First, fetch the session details
-        const sessionResponse = await fetch(`http://localhost:8000/api/chat/sessions?userAddress=${address}`);
+        const sessionResponse = await fetch(`http://localhost:8000/api/chat/sessions?userAddress=${addressStr}`);
         const sessions = await sessionResponse.json();
         const selectedSession = sessions.find((s: any) => s.id === sessionId);
         
@@ -236,7 +284,7 @@ export default function BaseLayout({ children }: { children: React.ReactNode }) 
           };
           
           // Then fetch the messages for this session
-          const messagesResponse = await fetch(`http://localhost:8000/api/chat?userAddress=${address}&sessionId=${sessionId}`);
+          const messagesResponse = await fetch(`http://localhost:8000/api/chat?userAddress=${addressStr}&sessionId=${sessionId}`);
           const messages = await messagesResponse.json();
           
           // Set the active session with its messages
@@ -280,6 +328,7 @@ export default function BaseLayout({ children }: { children: React.ReactNode }) 
         currentSession={activeSession} 
         onSessionCreate={setActiveSession}
         isNetwork={isNetwork}
+        logEvent={logEvent}
       />;
       case 'new-agent':
         return <NewAgentScreen />;
@@ -294,6 +343,7 @@ export default function BaseLayout({ children }: { children: React.ReactNode }) 
             currentSession={activeSession} 
             onSessionCreate={setActiveSession}
             isNetwork={isNetwork}
+            logEvent={logEvent}
           />;
     }
   };
@@ -316,13 +366,26 @@ export default function BaseLayout({ children }: { children: React.ReactNode }) 
             {/* Navigation */}
             <motion.div className="flex-1 px-2 mt-4 space-y-1" variants={itemVariants}>
           {/* Navigation Items */}
-            <InferenceModeNav 
-              setActiveRoute={setActiveRoute}
-              activeRoute={activeRoute}
-              userAddress={address?.toString() ?? null}
-              currentSession={activeSession}
-              onSessionSelect={handleSessionSelect}
-            />
+            {/* Show the correct navigation based on the mode */}
+            {isNetwork ? (
+              <InferenceModeNav
+                setActiveRoute={setActiveRoute} 
+                activeRoute={activeRoute}
+                userAddress={address ? address.toString() : null}
+                currentSession={activeSession}
+                onSessionSelect={handleSessionSelect}
+                setActiveSession={setActiveSession}
+              />
+            ) : (
+              <InferenceModeNav
+                setActiveRoute={setActiveRoute} 
+                activeRoute={activeRoute}
+                userAddress={address ? address.toString() : null}
+                currentSession={activeSession}
+                onSessionSelect={handleSessionSelect}
+                setActiveSession={setActiveSession}
+              />
+            )}
             </motion.div>
           </motion.div>
 
@@ -414,20 +477,94 @@ export default function BaseLayout({ children }: { children: React.ReactNode }) 
                     <div>
                       <ControlButton icon={
                         <ChevronsLeftRightEllipsis className="w-4 h-4 text-gray-600 dark:text-neutral-400" />}
-                        hasIndicator
-                        indicatorColor={"bg-blue-500"}
+                        hasIndicator={hasNewLogs}
+                        indicatorColor={"bg-red-500"}
                         iconColor={"text-neutral-400"}
+                        onClick={() => setHasNewLogs(false)}
                       />
                     </div>
                   </SheetTrigger>
-                  <SheetContent side="right" className="w-[400px] sm:w-[540px] border-0 bg-white/40 dark:bg-neutral-900/40 backdrop-blur-xl shadow-[0_8px_32px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_32px_rgb(0,0,0,0.1)]">
+                  <SheetContent 
+                    side="right" 
+                    className="w-[400px] sm:w-[540px] border-0 bg-white/40 dark:bg-neutral-900/40 backdrop-blur-xl shadow-[0_8px_32px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_32px_rgb(0,0,0,0.1)]"
+                  >
                     <SheetHeader className="px-6 pt-6">
                       <SheetTitle className="text-xl font-medium text-gray-800 dark:text-neutral-200">Logs</SheetTitle>
                     </SheetHeader>
                     <div className="px-6">
                       <div className="h-[1px] bg-white/20 dark:bg-neutral-800/50 my-6" />
                       <div className="space-y-6">
-                        {/* Settings content will go here */}
+                        {/* Logs panel */}
+                        <div className="h-[500px] overflow-y-auto rounded-lg bg-gray-900 p-4 text-sm font-mono">
+                          {activeSession?.messages?.length || sessionLogs.length ? (
+                            <>
+                              <div className="text-white mb-4">[{new Date(activeSession?.createdAt || Date.now()).toLocaleTimeString()}] Agent initialized and ready to assist with Move operations.</div>
+                              
+                              {/* Show session logs */}
+                              {sessionLogs.map((log, index) => {
+                                // Set different colors based on log type
+                                const colorClass = 
+                                  log.type === 'user' ? 'text-blue-300' : 
+                                  log.type === 'agent' ? 'text-green-300' : 
+                                  log.type === 'error' ? 'text-red-400' : 'text-white';
+                                
+                                // Add border for errors
+                                const errorClass = log.type === 'error' ? 'border border-red-800 p-2 rounded' : '';
+                                
+                                return (
+                                  <div key={`log-${index}`} className={`${colorClass} ${errorClass} mb-2`}>
+                                    {log.message}
+                                  </div>
+                                );
+                              })}
+                              
+                              {/* Show message logs */}
+                              {activeSession?.messages?.map((msg, idx) => {
+                                const timestamp = new Date(msg.timestamp).toLocaleTimeString();
+                                
+                                // Check for error messages
+                                if (msg.error) {
+                                  return (
+                                    <div key={`${msg.id}-error`} className="text-red-400 mb-2 border border-red-800 p-2 rounded">
+                                      [{timestamp}] Error: {msg.error}
+                                    </div>
+                                  );
+                                }
+                                
+                                // User message
+                                if (msg.sender === 'user') {
+                                  return (
+                                    <div key={`${msg.id}-user`} className="text-blue-300 mb-2">
+                                      [{timestamp}] User: {msg.content}
+                                    </div>
+                                  );
+                                }
+                                // System message before assistant response
+                                const prevMsg = idx > 0 ? activeSession.messages[idx - 1] : null;
+                                if (prevMsg && prevMsg.sender === 'user') {
+                                  return (
+                                    <React.Fragment key={`${msg.id}-full`}>
+                                      <div className="text-white mb-2">
+                                        [{timestamp}] Sending request to agent...
+                                      </div>
+                                      <div className="text-green-300 mb-4">
+                                        [{timestamp}] Agent-w: {msg.content}
+                                      </div>
+                                    </React.Fragment>
+                                  );
+                                }
+                                // Just assistant message without the sending step
+                                return (
+                                  <div key={`${msg.id}-assistant`} className="text-green-300 mb-4">
+                                    [{timestamp}] Agent-w: {msg.content}
+                                  </div>
+                                );
+                              })}
+                            </>
+                          ) : (
+                            <div className="text-gray-400 italic">No logs available for this session</div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </SheetContent>

@@ -8,6 +8,8 @@
     "db:migrate": "tsx --env-file=.env src/db/migrate.ts",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
+    "build":"tsc",
+    "start":"tsc && node dist/index.js",
     "db:studio": ""
   },
   "dependencies": {

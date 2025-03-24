@@ -1,0 +1,118 @@
+version: "3.9"
+
+configs:
+  prometheus_config:
+    file: ./prometheus/config.yml
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: DockerProduction
+    env_file:
+      - .env
+    ports:
+      - 8000:8000
+    networks:
+      - qiro_network
+
+    restart: "on-failure"
+
+  # prometheus:
+  #   image: prom/prometheus:latest
+  #   container_name: prometheus
+  #   ports:
+  #     - 9090:9090
+  #   configs:
+  #     - source: prometheus_config
+  #       target: /etc/prometheus/config.yml
+  #   volumes:
+  #     - prometheus-data:/prometheus
+  #   command: "--config.file=/etc/prometheus/config.yml"
+  #   restart: unless-stopped
+  #   networks:
+  #     - qiro_network
+
+  # loki:
+  #   image: grafana/loki:latest
+  #   container_name: grafana_loki_container_qiro
+  #   ports:
+  #     - "3100:3100"
+  #   volumes:
+  #     - grafana-loki-data-qiro:/var/lib/grafana-loki
+  #   restart: unless-stopped
+  #   depends_on:
+  #     - grafana
+  #   networks:
+  #     - qiro_network
+
+  # grafana:
+  #   image: grafana/grafana-oss:latest
+  #   container_name: grafana
+  #   ports:
+  #     - 3000:3000
+  #   volumes:
+  #     - grafana-data-qiro:/var/lib/grafana
+  #   environment:
+  #     - GF_SERVER_ROOT_URL=https://ms-api.qiro.fi/dashboard/
+  #     - GF_SERVER_SERVE_FROM_SUB_PATH=true
+  #   restart: unless-stopped
+  #   depends_on:
+  #     - prometheus
+  #   networks:
+  #     - qiro_network
+  caddy:
+    image: caddy:latest
+    container_name: caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - qiro_network
+    depends_on:
+      - web
+
+  # redis:
+  #   container_name: redis
+  #   image: redis
+  #   restart: always
+  #   ports:
+  #     - 6379:6379
+  #   expose:
+  #     - 6379
+  #   volumes:
+  #     - redis-data:/data
+  #     - redis-conf:/usr/local/etc/redis/redis.conf
+  #   networks:
+  #     - qiro_network
+  # adminer:
+  #   image: adminer
+  #   container_name: adminer
+  #   restart: always
+  #   ports:
+  #     - 8080:8080
+  #   networks:
+  #     - qiro_network
+  #   environment:
+  #     ADMINER_DEFAULT_SERVER: ${DB_HOST}
+
+networks:
+  qiro_network:
+    driver: bridge
+
+volumes:
+  prometheus-data:
+    driver: local
+  grafana-data-qiro:
+    driver: local
+  redis-data:
+  redis-conf:
+  grafana-loki-data-qiro:
+    driver: local
+  caddy_data:
+  caddy_config:

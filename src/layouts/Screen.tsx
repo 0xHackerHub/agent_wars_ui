@@ -54,15 +54,18 @@ interface NewChatScreenProps {
   currentSession: ChatSession | null;
   onSessionCreate: (session: ChatSession) => void;
   isNetwork: boolean;
+  logEvent?: (message: string, type: 'info' | 'user' | 'agent' | 'error') => void;
 }
 
-const NewChatScreen: React.FC<NewChatScreenProps> = ({ currentSession, onSessionCreate, isNetwork }) => {
+const NewChatScreen: React.FC<NewChatScreenProps> = ({ currentSession, onSessionCreate, isNetwork, logEvent }) => {
   const [inputValue, setInputValue] = useState('');
   const [isFocused, setIsFocused] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [userAddress, setUserAddress] = useState<string>('');
   const [activeSessionId, setActiveSessionId] = useState<string | null>(currentSession?.id || null);
+  const [sessionTitle, setSessionTitle] = useState<string>(currentSession?.title || 'New Chat');
+  const [isNewChat, setIsNewChat] = useState<boolean>(!currentSession?.id);
 
   // Get wallet address on component mount
   useEffect(() => {
@@ -72,12 +75,32 @@ const NewChatScreen: React.FC<NewChatScreenProps> = ({ currentSession, onSession
     setUserAddress(address);
   }, []);
 
-  // Update session ID if currentSession changes
+  // Update session ID and title if currentSession changes
   useEffect(() => {
-    if (currentSession?.id && currentSession.id !== activeSessionId) {
+    if (currentSession) {
       setActiveSessionId(currentSession.id);
+      setSessionTitle(currentSession.title);
+      setIsNewChat(false);
+      
+      // If current session has messages, load them
+      if (currentSession.messages && currentSession.messages.length > 0) {
+        const formattedMessages = currentSession.messages.map(msg => ({
+          id: msg.id,
+          text: msg.content,
+          type: msg.sender as 'user' | 'assistant'
+        }));
+        setMessages(formattedMessages);
+      } else {
+        setMessages([]);
+      }
+    } else {
+      // Reset for a new chat
+      setActiveSessionId(null);
+      setSessionTitle('New Chat');
+      setMessages([]);
+      setIsNewChat(true);
     }
-  }, [currentSession, activeSessionId]);
+  }, [currentSession]);
 
   const handleSendMessage = async () => {
     if (!inputValue.trim() || isLoading) return;
@@ -89,6 +112,17 @@ const NewChatScreen: React.FC<NewChatScreenProps> = ({ currentSession, onSession
     };
 
     setMessages(prev => [...prev, userMessage]);
+    
+    // Log user message
+    logEvent?.(`User: ${inputValue}`, 'user');
+    
+    // If this is the first message in a new chat, update the title
+    if (isNewChat) {
+      // Update the title with the first few words of the message
+      const newTitle = inputValue.substring(0, 30) + (inputValue.length > 30 ? '...' : '');
+      setSessionTitle(newTitle);
+    }
+    
     setInputValue('');
     setIsLoading(true);
 
@@ -97,8 +131,11 @@ const NewChatScreen: React.FC<NewChatScreenProps> = ({ currentSession, onSession
       console.log(`Sending message to ${serverUrl}/api/chat`);
       
       // Use the wallet address if available, otherwise fall back to session ID or anonymous
-      const address = userAddress || currentSession?.id || 'anonymous';
+      const address = userAddress || 'anonymous';
       console.log('Using address for chat message:', address);
+      
+      // Log sending request
+      logEvent?.('Sending request to agent...', 'info');
       
       const response = await fetch(`${serverUrl}/api/chat`, {
         method: 'POST',
@@ -109,18 +146,23 @@ const NewChatScreen: React.FC<NewChatScreenProps> = ({ currentSession, onSession
           message: inputValue,
           userAddress: address,
           role: 'user',
-          // Send the active session ID if we have one
-          sessionId: activeSessionId
+          // Only send sessionId if not a new chat
+          sessionId: isNewChat ? null : activeSessionId
         }),
       });
 
       const data: ChatResponse = await response.json();
 
       if (!response.ok) {
+        // Log error
+        logEvent?.(`Error: ${data.error || 'Failed to get response'}`, 'error');
         throw new Error(data.error || 'Failed to get response');
       }
 
       if (data.response) {
+        // Log agent response
+        logEvent?.(`Agent-w: ${data.response}`, 'agent');
+        
         setMessages(prev => [...prev, {
           id: data.id || Date.now().toString(),
           text: data.response,
@@ -128,13 +170,32 @@ const NewChatScreen: React.FC<NewChatScreenProps> = ({ currentSession, onSession
         }]);
 
         // Store the session ID from the response
-        if (data.sessionId && !activeSessionId) {
+        if (data.sessionId) {
           setActiveSessionId(data.sessionId);
+          setIsNewChat(false);
           
-          // Create a new session if we don't have one yet
-          if (!currentSession) {
-            const newSession = await createChatSession(inputValue);
-            newSession.id = data.sessionId; // Use the server-side session ID
+          // Create a new session in the UI if we don't have one yet
+          if (isNewChat) {
+            const newSession: ChatSession = {
+              id: data.sessionId,
+              title: sessionTitle !== 'New Chat' ? sessionTitle : inputValue.substring(0, 30) + (inputValue.length > 30 ? '...' : ''),
+              messages: [
+                {
+                  id: userMessage.id,
+                  content: userMessage.text,
+                  sender: 'user',
+                  timestamp: Date.now()
+                },
+                {
+                  id: data.id,
+                  content: data.response,
+                  sender: 'assistant',
+                  timestamp: Date.now()
+                }
+              ],
+              createdAt: Date.now(),
+              updatedAt: Date.now()
+            };
             onSessionCreate(newSession);
           }
         }
@@ -143,9 +204,18 @@ const NewChatScreen: React.FC<NewChatScreenProps> = ({ currentSession, onSession
       }
     } catch (error) {
       console.error('Error sending message:', error);
+      
+      // Get the error message
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : 'An error occurred while processing your message';
+      
+      // Log the error
+      logEvent?.(`${errorMessage}`, 'error');
+      
       setMessages(prev => [...prev, {
         id: Date.now().toString(),
-        text: error instanceof Error ? error.message : 'An error occurred while processing your message',
+        text: errorMessage,
         type: 'assistant',
         error: true
       }]);

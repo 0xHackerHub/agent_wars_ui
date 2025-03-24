@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Send } from 'lucide-react';
 import { useChat } from '@/hooks/useChat';
+import { ChatSession } from '@/types/chat';
 
 interface Message {
   id: string;
@@ -12,14 +13,30 @@ interface Message {
 
 interface ChatProps {
   userAddress: string | null;
+  initialSession?: ChatSession | null;
 }
 
-export function Chat({ userAddress }: ChatProps) {
+export function Chat({ userAddress, initialSession }: ChatProps) {
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   // Use the custom hook that connects directly to the Express server
-  const { messages, isLoading, sendMessage } = useChat(userAddress);
+  const { messages, isLoading, sendMessage, setInitialMessages } = useChat(userAddress);
+
+  // If we have an initial session, use its messages
+  useEffect(() => {
+    if (initialSession?.messages?.length) {
+      // Convert format from ChatSession message format to Chat component format
+      const convertedMessages = initialSession.messages.map(msg => ({
+        id: msg.id,
+        message: msg.content,
+        response: msg.sender === 'assistant' ? msg.content : '',
+        createdAt: new Date(msg.timestamp).toISOString()
+      }));
+      
+      setInitialMessages(convertedMessages);
+    }
+  }, [initialSession, setInitialMessages]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -37,7 +54,7 @@ export function Chat({ userAddress }: ChatProps) {
     setInput('');
 
     try {
-      await sendMessage(userMessage);
+      await sendMessage(userMessage, initialSession?.id);
     } catch (error) {
       console.error('Failed to send message:', error);
     }

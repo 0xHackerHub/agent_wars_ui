@@ -6,6 +6,7 @@ interface Message {
   message: string;
   response: string;
   createdAt: string;
+  error?: string;
 }
 
 // Use the server URL directly
@@ -14,6 +15,7 @@ const SERVER_URL = 'http://localhost:8000';
 export const useChat = (userAddress: string | null) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [errors, setErrors] = useState<string[]>([]);
 
   useEffect(() => {
     if (userAddress) {
@@ -45,21 +47,28 @@ export const useChat = (userAddress: string | null) => {
     }
   };
 
-  const sendMessage = async (message: string) => {
+  // Add function to set initial messages
+  const setInitialMessages = (initialMessages: Message[]) => {
+    setMessages(initialMessages);
+  };
+
+  const sendMessage = async (message: string, sessionId?: string | null) => {
     if (!userAddress || !message.trim()) return;
 
     setIsLoading(true);
     console.log(`Sending message to ${SERVER_URL}/api/chat with data:`, {
       message,
       userAddress,
-      role: 'user'
+      role: 'user',
+      sessionId
     });
     
     try {
       const response = await axios.post(`${SERVER_URL}/api/chat`, {
         message,
         userAddress,
-        role: 'user'  // Add role parameter required by the server
+        role: 'user',
+        sessionId: sessionId || undefined
       });
 
       console.log('Message response:', response.data);
@@ -74,6 +83,8 @@ export const useChat = (userAddress: string | null) => {
       setMessages(prev => [...prev, newMessage]);
       return newMessage;
     } catch (error) {
+      let errorMessage = 'An unexpected error occurred';
+      
       if (axios.isAxiosError(error)) {
         console.error('Error sending message:', {
           message: error.message,
@@ -82,9 +93,30 @@ export const useChat = (userAddress: string | null) => {
           data: error.response?.data,
           url: error.config?.url
         });
+        
+        errorMessage = error.response?.data?.error || 
+                      error.response?.statusText || 
+                      error.message || 
+                      'Network error occurred';
       } else {
         console.error('Unexpected error sending message:', error);
+        errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       }
+      
+      // Add the error to our errors list for logging
+      setErrors(prev => [...prev, `[${new Date().toLocaleTimeString()}] Error: ${errorMessage}`]);
+      
+      // Create error message in the chat
+      const errorMsg: Message = {
+        id: Date.now().toString(),
+        message,
+        response: 'Error: ' + errorMessage,
+        createdAt: new Date().toISOString(),
+        error: errorMessage
+      };
+      
+      setMessages(prev => [...prev, errorMsg]);
+      
       throw error;
     } finally {
       setIsLoading(false);
@@ -96,5 +128,7 @@ export const useChat = (userAddress: string | null) => {
     isLoading,
     sendMessage,
     fetchChatHistory,
+    setInitialMessages,
+    errors
   };
 };
