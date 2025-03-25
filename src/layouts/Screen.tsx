@@ -67,6 +67,14 @@ const NewChatScreen: React.FC<NewChatScreenProps> = ({ currentSession, onSession
   const [sessionTitle, setSessionTitle] = useState<string>(currentSession?.title || 'New Chat');
   const [isNewChat, setIsNewChat] = useState<boolean>(!currentSession?.id);
 
+  // Add handleKeyDown function
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
+
   // Get wallet address on component mount
   useEffect(() => {
     // Get the wallet address on client-side only
@@ -225,8 +233,8 @@ const NewChatScreen: React.FC<NewChatScreenProps> = ({ currentSession, onSession
   };
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+    <div className="flex flex-col h-full relative">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-24">
         <AnimatePresence>
           {messages.length === 0 && (
             <motion.div
@@ -271,27 +279,63 @@ const NewChatScreen: React.FC<NewChatScreenProps> = ({ currentSession, onSession
           )}
         </AnimatePresence>
       </div>
-      <div className="p-4 border-t">
-        <div className="flex gap-2">
-          <Input
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-            placeholder="Type your message..."
-            className={cn(
-              "flex-1",
-              isFocused && "ring-2 ring-primary"
-            )}
-            onFocus={() => setIsFocused(true)}
-            onBlur={() => setIsFocused(false)}
-            disabled={isLoading}
-          />
-          <Button 
-            onClick={handleSendMessage}
-            disabled={!inputValue.trim() || isLoading}
-          >
-            Send
-          </Button>
+
+      {/* Input box always visible */}
+      <div className="absolute bottom-0 left-0 right-0 z-20">
+        <div className="py-4">
+          <div className="max-w-[800px] mx-auto px-8">
+            <motion.div 
+              className="bg-white/40 dark:bg-neutral-900/40 border border-white/20 dark:border-neutral-800/50 backdrop-blur-xl rounded-2xl flex items-center shadow-[0_8px_32px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_32px_rgb(0,0,0,0.1)]"
+              whileHover={{ scale: 1.01 }}
+              transition={{ type: "spring", stiffness: 400, damping: 30 }}
+            >
+              <div className="flex-1 relative">
+                <Input
+                  type="text"
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  onFocus={() => setIsFocused(true)}
+                  onBlur={() => setIsFocused(false)}
+                  onKeyDown={handleKeyDown}
+                  disabled={isLoading}
+                  className="flex-1 bg-transparent border-0 rounded-full h-12 px-6 text-sm text-gray-800 dark:text-neutral-200 focus-visible:ring-0 focus-visible:ring-offset-0"
+                />
+                {!inputValue && !isFocused && (
+                  <div className="absolute left-6 top-1/2 -translate-y-1/2 pointer-events-none text-sm text-gray-500 dark:text-neutral-500">
+                    <TypeAnimation
+                      sequence={[
+                        'Ask me anything...',
+                        2000,
+                        'Ask me about cars...',
+                        2000,
+                        'Ask me about people...',
+                        2000,
+                        'Ask me to write code...',
+                        2000,
+                      ]}
+                      wrapper="span"
+                      speed={50}
+                      repeat={Infinity}
+                    />
+                  </div>
+                )}
+              </div>
+              <div className="pr-2">
+                <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
+                  <Button 
+                    size="icon"
+                    onClick={handleSendMessage}
+                    disabled={!inputValue.trim() || isLoading}
+                    className="rounded-full w-8 h-8 bg-white dark:bg-neutral-700 hover:bg-neutral-100/50 dark:hover:bg-neutral-800"
+                  >
+                    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-gray-500 dark:text-neutral-200">
+                      <path d="M8.14645 3.14645C8.34171 2.95118 8.65829 2.95118 8.85355 3.14645L12.8536 7.14645C13.0488 7.34171 13.0488 7.65829 12.8536 7.85355L8.85355 11.8536C8.65829 12.0488 8.34171 12.0488 8.14645 11.8536C7.95118 11.6583 7.95118 11.3417 8.14645 11.1464L11.2929 8H2.5C2.22386 8 2 7.77614 2 7.5C2 7.22386 2.22386 7 2.5 7H11.2929L8.14645 3.85355C7.95118 3.65829 7.95118 3.34171 8.14645 3.14645Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path>
+                    </svg>
+                  </Button>
+                </motion.div>
+              </div>
+            </motion.div>
+          </div>
         </div>
       </div>
     </div>

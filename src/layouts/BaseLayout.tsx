@@ -493,9 +493,9 @@ export default function BaseLayout({ children }: { children: React.ReactNode }) 
                     </SheetHeader>
                     <div className="px-6">
                       <div className="h-[1px] bg-white/20 dark:bg-neutral-800/50 my-6" />
-                      <div className="space-y-6">
+                      <div className="space-y-4">
                         {/* Logs panel */}
-                        <div className="h-[500px] overflow-y-auto rounded-lg bg-gray-900 p-4 text-sm font-mono">
+                        <div className="h-[600px] overflow-y-auto rounded-lg p-4 text-sm font-mono">
                           {activeSession?.messages?.length || sessionLogs.length ? (
                             <>
                               <div className="text-white mb-4">[{new Date(activeSession?.createdAt || Date.now()).toLocaleTimeString()}] Agent initialized and ready to assist with Move operations.</div>
