@@ -4,6 +4,7 @@ export interface ChatMessage {
     timestamp: number;
     sender: 'user' | 'assistant';
     error?: string;
+    sessionId?: string;
   }
   
   export interface ChatSession {

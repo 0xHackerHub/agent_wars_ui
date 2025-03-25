@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { TypeAnimation } from 'react-type-animation';
 import { cn } from '@/lib/utils';
 import { Switch } from "@/components/ui/switch";
-import { ChatSession } from '@/types/chat';
+import { ChatSession as ImportedChatSession } from '@/types/chat';
 import { useChat } from '@/hooks/useChat';
 import ConnectionDetails from '@/components/Connection';
 import { createChatSession } from '@/utils/chatStorage';
@@ -44,10 +44,20 @@ interface Message {
 }
 
 interface ChatResponse {
-  id: string;
-  response: string;
+  messages: Message[];
+  sessionId: string;
   error?: string;
-  sessionId?: string;
+}
+
+interface ChatSessionMessage {
+  id: string;
+  content: string;
+  sender: 'user' | 'assistant';
+  timestamp: number;
+}
+
+interface ChatSession extends ImportedChatSession {
+  messages: ChatSessionMessage[];
 }
 
 interface NewChatScreenProps {
@@ -167,15 +177,9 @@ const NewChatScreen: React.FC<NewChatScreenProps> = ({ currentSession, onSession
         throw new Error(data.error || 'Failed to get response');
       }
 
-      if (data.response) {
-        // Log agent response
-        logEvent?.(`Agent-w: ${data.response}`, 'agent');
-        
-        setMessages(prev => [...prev, {
-          id: data.id || Date.now().toString(),
-          text: data.response,
-          type: 'assistant'
-        }]);
+      if (data.messages && Array.isArray(data.messages)) {
+        // Update messages with the response
+        setMessages(prev => [...prev, ...data.messages.filter((msg: Message) => msg.type === 'assistant')]);
 
         // Store the session ID from the response
         if (data.sessionId) {
@@ -191,15 +195,17 @@ const NewChatScreen: React.FC<NewChatScreenProps> = ({ currentSession, onSession
                 {
                   id: userMessage.id,
                   content: userMessage.text,
-                  sender: 'user',
+                  sender: 'user' as const,
                   timestamp: Date.now()
                 },
-                {
-                  id: data.id,
-                  content: data.response,
-                  sender: 'assistant',
-                  timestamp: Date.now()
-                }
+                ...data.messages
+                  .filter((msg: Message) => msg.type === 'assistant')
+                  .map((msg: Message) => ({
+                    id: msg.id,
+                    content: msg.text,
+                    sender: 'assistant' as const,
+                    timestamp: Date.now()
+                  }))
               ],
               createdAt: Date.now(),
               updatedAt: Date.now()
@@ -261,7 +267,21 @@ const NewChatScreen: React.FC<NewChatScreenProps> = ({ currentSession, onSession
                     : "bg-muted mr-auto"
               )}
             >
-              {message.text}
+              <div className="flex items-start gap-2">
+                <div className="flex-1">
+                  {message.type === 'user' ? (
+                    <p className="text-sm">{message.text}</p>
+                  ) : (
+                    <div className="prose prose-sm dark:prose-invert">
+                      {message.error ? (
+                        <p className="text-sm">{message.error}</p>
+                      ) : (
+                        <p className="text-sm whitespace-pre-wrap">{message.text}</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
             </motion.div>
           ))}
           {isLoading && (
@@ -479,31 +499,6 @@ const ConnectionsScreen: React.FC = () => {
   );
 };
 
-const OperatorWelcomeScreen: React.FC<{ onStart: () => void }> = ({ onStart }) => {
-  return (
-    <div className="flex flex-col h-full p-6 rounded-3xl">
-      <div className="flex-1 flex items-center justify-center">
-        <div className="text-center space-y-6">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-white/40 dark:bg-neutral-900/40 border border-white/20 dark:border-neutral-800/50 backdrop-blur-xl mb-4">
-            <Network className="w-10 h-10 text-gray-600 dark:text-neutral-400" />
-          </div>
-          <h2 className="text-2xl font-medium text-gray-800 dark:text-neutral-200">Welcome to Operator Mode</h2>
-          <p className="text-gray-600 dark:text-gray-400 max-w-md mx-auto">
-            Start your node to begin processing requests and contributing to the decentralized network.
-          </p>
-          <div className="pt-4">
-            <Button
-              className="h-12 px-6 rounded-xl bg-emerald-500/80 hover:bg-emerald-500 text-white border-0 shadow-lg shadow-emerald-500/20"
-            >
-              <Play className="w-5 h-5 mr-2" />
-              Start Node
-            </Button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 const ModelsScreen: React.FC = () => {
   const mockModels = [
@@ -571,6 +566,5 @@ export {
   NewAgentScreen,
   BrowseAgentsScreen,
   ConnectionsScreen,
-  OperatorWelcomeScreen,
   ModelsScreen
 }; 

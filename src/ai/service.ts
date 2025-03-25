@@ -5,14 +5,24 @@ import { createRun } from './openai/create-run';
 import { performRun } from './openai/perform-run';
 import { Thread } from 'openai/resources/beta/threads/threads';
 import { Assistant } from 'openai/resources/beta/assistants';
+import { chatService as serverChatService } from '../../server/src/ai/openai';
+
+interface Message {
+  id: string;
+  text: string;
+  type: 'user' | 'assistant';
+  error?: boolean;
+}
 
 interface ChatResponse {
-  assistantId: string;
-  threadId: string;
-  text: {
-    value: string;
-    annotations: any[];
-  };
+  messages: Message[];
+  sessionId: string;
+  error?: string;
+}
+
+interface ChatMessage {
+  role: string;
+  content: string;
 }
 
 class ChatService {
@@ -60,13 +70,13 @@ class ChatService {
       const runResponse = await performRun(runResult.run, this.client, thread);
 
       if ('text' in runResponse) {
-        const response = {
-          assistantId: runResult.assistantId,
-          threadId: runResult.threadId,
-          text: {
-            value: runResponse.text.value,
-            annotations: runResponse.text.annotations || []
-          }
+        const response: ChatResponse = {
+          messages: [{
+            id: Date.now().toString(),
+            text: runResponse.text.value,
+            type: 'assistant'
+          }],
+          sessionId: thread.id
         };
         this.latestResponse = response;
         return response;
@@ -76,6 +86,32 @@ class ChatService {
     } catch (error) {
       console.error('Chat service error:', error);
       throw error;
+    }
+  }
+
+  async generateResponse(messages: ChatMessage[]) {
+    try {
+      // Ensure messages are in the correct format
+      const formattedMessages = messages.map(msg => ({
+        role: msg.role === 'user' ? 'user' : 'assistant',
+        content: msg.content
+      }));
+
+      console.log('Sending formatted messages:', formattedMessages);
+      const response = await serverChatService.generateResponse(formattedMessages);
+      return response;
+    } catch (error) {
+      console.error('Error in chat service:', error);
+      return new Response(
+        JSON.stringify({
+          error: error instanceof Error ? error.message : 'An error occurred',
+          status: 'error'
+        }),
+        { 
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        }
+      );
     }
   }
 }

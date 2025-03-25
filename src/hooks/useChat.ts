@@ -7,6 +7,7 @@ interface Message {
   response: string;
   createdAt: string;
   error?: string;
+  sessionId?: string;
 }
 
 // Use the server URL directly
@@ -73,13 +74,16 @@ export const useChat = (userAddress: string | null) => {
 
       console.log('Message response:', response.data);
       
+      // Create a new message with the response data
       const newMessage: Message = {
         id: response.data.id,
-        message,
-        response: response.data.response || '',
-        createdAt: new Date().toISOString(),
+        message: response.data.message,
+        response: response.data.response,
+        createdAt: response.data.createdAt,
+        sessionId: response.data.sessionId
       };
 
+      // Update messages state with the new message
       setMessages(prev => [...prev, newMessage]);
       return newMessage;
     } catch (error) {
@@ -110,14 +114,16 @@ export const useChat = (userAddress: string | null) => {
       const errorMsg: Message = {
         id: Date.now().toString(),
         message,
-        response: 'Error: ' + errorMessage,
+        response: `Error: ${errorMessage}`,
         createdAt: new Date().toISOString(),
         error: errorMessage
       };
       
+      // Update messages state with the error message
       setMessages(prev => [...prev, errorMsg]);
       
-      throw error;
+      // Don't throw the error, just return the error message
+      return errorMsg;
     } finally {
       setIsLoading(false);
     }

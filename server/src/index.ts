@@ -150,7 +150,7 @@ app.get('/api/chat', (async (req, res) => {
 // Send message
 app.post('/api/chat', (async (req, res) => {
   try {
-    const { userAddress, message, role, sessionId } = req.body;
+    const { userAddress, message, role="user", sessionId } = req.body;
     if (!userAddress || !message) {
       return res.status(400).json({ error: 'Missing required fields: userAddress and message are required' });
     }
@@ -210,30 +210,66 @@ app.post('/api/chat', (async (req, res) => {
       console.log('Updated existing session timestamp:', chatSessionId);
     }
 
+    // Format message properly for the chatService
+    const formattedMessage = {
+      role: role,
+      content: message
+    };
+
     // Generate AI response
-    const aiResponse = await chatService.generateResponse(message);
+    const aiResponse = await chatService.generateResponse(formattedMessage);
     console.log('AI response:', aiResponse);
 
+    // Handle the streaming response
+    let responseText = '';
+    if (aiResponse.body) {
+      const reader = aiResponse.body.getReader();
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        responseText += new TextDecoder().decode(value);
+      }
+    }
+
+    // Convert markdown to plain text
+    responseText = responseText
+      .replace(/\*\*(.*?)\*\*/g, '$1') // Bold
+      .replace(/\*(.*?)\*/g, '$1')     // Italic
+      .replace(/\[(.*?)\]\((.*?)\)/g, '$1') // Links
+      .replace(/`(.*?)`/g, '$1')       // Code
+      .replace(/#{1,6}\s/g, '')        // Headers
+      .replace(/\n/g, ' ');            // Newlines to spaces
+
+    console.log('Processed response text:', responseText);
+
     // Save user message
-    const [userMessage] = await db.insert(chatHistory).values({
+    const [userMessage] = await db.insert(chatHistory).values([{
       userAddress,
       sessionId: chatSessionId,
       message,
       response: '',
-    }).returning();
+      createdAt: new Date()
+    }]).returning();
 
     // Save AI response
-    const [assistantMessage] = await db.insert(chatHistory).values({
+    const [assistantMessage] = await db.insert(chatHistory).values([{
       userAddress,
       sessionId: chatSessionId,
-      message: aiResponse,
-      response: aiResponse,
-    }).returning();
+      message: responseText,
+      response: responseText,
+      createdAt: new Date()
+    }]).returning();
 
+    // Format response to match frontend expectations
     res.json({
-      id: assistantMessage.id,
-      sessionId: chatSessionId,
-      response: aiResponse
+      messages: [
+        {
+          id: assistantMessage.id,
+          text: responseText,
+          type: 'assistant'
+        }
+      ],
+      sessionId: chatSessionId
     });
   } catch (error) {
     console.error('Error processing message:', error);

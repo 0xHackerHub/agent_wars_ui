@@ -9,6 +9,7 @@ interface Message {
   message: string;
   response: string;
   createdAt: string;
+  error?: string;
 }
 
 interface ChatProps {
@@ -31,7 +32,8 @@ export function Chat({ userAddress, initialSession }: ChatProps) {
         id: msg.id,
         message: msg.content,
         response: msg.sender === 'assistant' ? msg.content : '',
-        createdAt: new Date(msg.timestamp).toISOString()
+        createdAt: new Date(msg.timestamp).toISOString(),
+        sessionId: msg.sessionId
       }));
       
       setInitialMessages(convertedMessages);
@@ -54,7 +56,10 @@ export function Chat({ userAddress, initialSession }: ChatProps) {
     setInput('');
 
     try {
-      await sendMessage(userMessage, initialSession?.id);
+      const response = await sendMessage(userMessage, initialSession?.id);
+      if (response?.error) {
+        console.error('Error in response:', response.error);
+      }
     } catch (error) {
       console.error('Failed to send message:', error);
     }
@@ -65,15 +70,25 @@ export function Chat({ userAddress, initialSession }: ChatProps) {
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((msg) => (
           <div key={msg.id} className="space-y-2">
+            {/* User message */}
             <div className="flex items-start gap-2">
               <div className="bg-blue-100 dark:bg-blue-900 rounded-lg p-2 max-w-[80%]">
-                <p className="text-sm">{msg.message}</p>
+                <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
               </div>
             </div>
+            {/* Assistant response */}
             {msg.response && (
               <div className="flex items-start gap-2 justify-end">
                 <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-2 max-w-[80%]">
-                  <p className="text-sm">{msg.response}</p>
+                  <p className="text-sm whitespace-pre-wrap">{msg.response}</p>
+                </div>
+              </div>
+            )}
+            {/* Error message if any */}
+            {msg.error && (
+              <div className="flex items-start gap-2 justify-end">
+                <div className="bg-red-100 dark:bg-red-900 rounded-lg p-2 max-w-[80%]">
+                  <p className="text-sm text-red-600 dark:text-red-400 whitespace-pre-wrap">{msg.error}</p>
                 </div>
               </div>
             )}

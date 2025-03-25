@@ -316,12 +316,6 @@ export default function BaseLayout({ children }: { children: React.ReactNode }) 
   };
 
   const renderActiveScreen = () => {
-    if (isNetwork && activeRoute === 'new-chat') {
-      return <OperatorWelcomeScreen onStart={() => {
-        setIsRunning(true);
-        setActiveRoute('status');
-      }} />;
-    }
     switch (activeRoute) {
       case 'new-chat':
         return <NewChatScreen 
