@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { MessageCircle } from 'lucide-react';
+import { MessageCircle, ChevronRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
 import { AccountAddress } from '@aptos-labs/ts-sdk';
+import { Button } from '@/components/ui/button';
 
 interface ChatHistoryProps {
   userAddress: string | AccountAddress | null;
@@ -23,6 +24,9 @@ export function ChatHistory({ userAddress, activeChat, onChatSelect }: ChatHisto
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  
+  // Number of chats to show in the sidebar
+  const MAX_VISIBLE_CHATS = 10;
 
   // Fetch chat sessions directly from the server
   useEffect(() => {
@@ -41,7 +45,7 @@ export function ChatHistory({ userAddress, activeChat, onChatSelect }: ChatHisto
         setIsLoading(false);
       }
     };
-
+    
     fetchChatSessions();
   }, [userAddress]);
 
@@ -49,14 +53,20 @@ export function ChatHistory({ userAddress, activeChat, onChatSelect }: ChatHisto
   const sortedSessions = [...sessions].sort((a, b) => 
     new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
   );
-
+  
+  // Only show the most recent MAX_VISIBLE_CHATS chats
+  const visibleSessions = sortedSessions.slice(0, MAX_VISIBLE_CHATS);
+  
   if (sortedSessions.length === 0 && !isLoading) {
     return null;
   }
 
   const handleChatSelect = (sessionId: string) => {
-    router.push(`/chat/${sessionId}`);
     onChatSelect(sessionId);
+  };
+  
+  const handleViewAll = () => {
+    router.push('/recent');
   };
 
   return (
@@ -65,6 +75,7 @@ export function ChatHistory({ userAddress, activeChat, onChatSelect }: ChatHisto
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
+      style={{ height: 'auto' }} // Keep height stable
     >
       <div className="text-xs font-medium text-gray-500 dark:text-gray-400 px-3 pb-2 pt-4">
         Chat History
@@ -74,7 +85,7 @@ export function ChatHistory({ userAddress, activeChat, onChatSelect }: ChatHisto
         {isLoading ? (
           <div className="text-xs text-gray-400 px-3 py-2">Loading sessions...</div>
         ) : (
-          sortedSessions.map((session) => (
+          visibleSessions.map((session) => (
             <button
               key={session.id}
               onClick={() => handleChatSelect(session.id)}
@@ -94,6 +105,18 @@ export function ChatHistory({ userAddress, activeChat, onChatSelect }: ChatHisto
               </span>
             </button>
           ))
+        )}
+        
+        {/* View All button when there are more than MAX_VISIBLE_CHATS sessions */}
+        {sortedSessions.length > MAX_VISIBLE_CHATS && (
+          <Button
+            variant="ghost"
+            onClick={handleViewAll}
+            className="w-full flex items-center justify-between px-3 py-2 text-sm text-blue-500 hover:bg-gray-100 dark:hover:bg-neutral-800/50 transition-colors"
+          >
+            <span>View all chats</span>
+            <ChevronRight className="h-4 w-4" />
+          </Button>
         )}
       </div>
     </motion.div>

@@ -1,67 +1,116 @@
-"use client"
-import React, { useState, useEffect } from 'react';
+"use client";
+
+import { useState, useEffect } from 'react';
+import { MessageCircle, ArrowLeft } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { cn } from '@/lib/utils';
+import axios from 'axios';
 import { useRouter } from 'next/navigation';
-import { MessageCircle } from 'lucide-react';
-import { ChatSession } from '@/types/chat';
-import { useChat } from '@/hooks/useChat';
+import { Button } from '@/components/ui/button';
+import { useWallet } from '@/hooks/useWallet';
+
+interface ChatSession {
+  id: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export default function RecentPage() {
-  const router = useRouter();
-  const { userAddress } = useChat();
   const [sessions, setSessions] = useState<ChatSession[]>([]);
-  const [selectedSession, setSelectedSession] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
+  const { address } = useWallet();
 
+  // Fetch chat sessions directly from the server
   useEffect(() => {
-    const fetchSessions = async () => {
-      if (!userAddress) return;
+    if (!address) return;
+    
+    const fetchChatSessions = async () => {
+      setIsLoading(true);
       try {
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_SERVER_URL}/api/chat/sessions?userAddress=${userAddress}`
-        );
-        const data = await response.json();
-        setSessions(data);
+        // Convert to string if it's an AccountAddress
+        const addressStr = address.toString();
+        const response = await axios.get(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/chat/sessions?userAddress=${addressStr}`);
+        setSessions(response.data);
       } catch (error) {
-        console.error('Error fetching sessions:', error);
+        console.error('Error fetching chat sessions:', error);
+      } finally {
+        setIsLoading(false);
       }
     };
+    
+    fetchChatSessions();
+  }, [address]);
 
-    fetchSessions();
-  }, [userAddress]);
+  // Sort sessions by most recent first
+  const sortedSessions = [...sessions].sort((a, b) => 
+    new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+  );
 
   const handleChatSelect = (sessionId: string) => {
-    setSelectedSession(sessionId);
     router.push(`/chat/${sessionId}`);
+  };
+  
+  const handleBack = () => {
+    router.back();
   };
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex-1 flex flex-col h-full">
+      {/* Header */}
+      <div className="flex items-center px-6 py-4 border-b border-white/20 dark:border-neutral-800/50">
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          onClick={handleBack}
+          className="mr-4"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <h1 className="text-xl font-medium text-gray-800 dark:text-neutral-200">All Chat History</h1>
+      </div>
+      
+      {/* Chat list */}
       <div className="flex-1 overflow-y-auto p-4">
-        <h1 className="text-2xl font-bold mb-6">All Chat History</h1>
-        <div className="grid gap-4">
-          {sessions.map((session) => (
-            <div
-              key={session.id}
-              className={`p-4 rounded-lg border ${
-                selectedSession === session.id
-                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                  : 'border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-700'
-              }`}
-            >
-              <button
-                onClick={() => handleChatSelect(session.id)}
-                className="w-full flex items-center gap-3 text-left"
+        <motion.div
+          className="space-y-2"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+        >
+          {isLoading ? (
+            <div className="text-center py-8 text-gray-400">Loading chat history...</div>
+          ) : sortedSessions.length === 0 ? (
+            <div className="text-center py-8 text-gray-400">No chat history found</div>
+          ) : (
+            sortedSessions.map((session) => (
+              <motion.div
+                key={session.id}
+                initial={{ y: 5, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ duration: 0.2 }}
               >
-                <MessageCircle className="w-5 h-5 text-gray-500 dark:text-neutral-400" />
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-lg font-medium truncate">{session.title}</h3>
-                  <p className="text-sm text-gray-500 dark:text-neutral-400">
-                    Last updated: {new Date(session.updatedAt).toLocaleDateString()}
-                  </p>
-                </div>
-              </button>
-            </div>
-          ))}
-        </div>
+                <button
+                  onClick={() => handleChatSelect(session.id)}
+                  className="w-full flex items-center gap-3 p-4 text-left rounded-lg hover:bg-white/10 dark:hover:bg-neutral-800/50 transition-colors border border-white/10 dark:border-neutral-800/50"
+                >
+                  <div className="flex-shrink-0 bg-white/10 dark:bg-neutral-800/50 rounded-full p-2">
+                    <MessageCircle className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-medium text-gray-800 dark:text-white truncate">
+                      {session.title}
+                    </h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                      Last updated: {new Date(session.updatedAt).toLocaleString()}
+                    </p>
+                  </div>
+                </button>
+              </motion.div>
+            ))
+          )}
+        </motion.div>
       </div>
     </div>
   );

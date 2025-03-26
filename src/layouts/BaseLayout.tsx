@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useTheme } from "@/components/theme-provider";
 import { AnimatePresence, motion } from "framer-motion";
 import { Route } from "@/types/routes";
-import { NewChatScreen, NewAgentScreen, BrowseAgentsScreen, ConnectionsScreen, OperatorWelcomeScreen, ModelsScreen } from "./Screen";
+import { NewChatScreen, NewAgentScreen, BrowseAgentsScreen, ConnectionsScreen, ModelsScreen } from "./Screen";
 import { cn } from "@/lib/utils";
 import { ChatSession } from "@/types/chat";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
