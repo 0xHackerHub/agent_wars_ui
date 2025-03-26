@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { chatService } from '@/ai/service';
 
 interface SubscribeResponse {
   assistantId: string;
@@ -8,37 +7,43 @@ interface SubscribeResponse {
   timestamp?: number;
 }
 
-export async function POST(req: Request) {
+export const runtime = "edge";
+
+export async function POST(request: Request) {
   try {
-    const result = await chatService.getLatestResponse();
-    
-    if (!result) {
+    const body = await request.json();
+    const { messages, showIntermediateSteps } = body;
+
+    if (!messages || !Array.isArray(messages)) {
       return NextResponse.json(
-        { 
-          error: 'No chat response available yet',
-          timestamp: Date.now()
-        },
-        { status: 404 }
+        { error: 'Messages array is required' },
+        { status: 400 }
       );
     }
 
-    const response: SubscribeResponse = {
-      assistantId: result.assistantId,
-      threadId: result.threadId,
-      content: result.text.value,
-      timestamp: Date.now()
-    };
-
-    return NextResponse.json(response);
-  } catch (error) {
-    console.error('Chat subscription error:', error);
-    
-    return NextResponse.json(
-      { 
-        error: 'Failed to subscribe to chat',
-        details: error instanceof Error ? error.message : 'Unknown error',
-        timestamp: Date.now()
+    const response = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/chat/subscribe`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
       },
+      body: JSON.stringify({
+        messages,
+        showIntermediateSteps,
+      }),
+    });
+
+    // Forward the response headers
+    const headers = new Headers(response.headers);
+
+    // Create a new response with the same headers and body
+    return new Response(response.body, {
+      status: response.status,
+      headers,
+    });
+  } catch (error) {
+    console.error('Error in subscribe route:', error);
+    return NextResponse.json(
+      { error: 'Failed to process subscription' },
       { status: 500 }
     );
   }
@@ -46,9 +51,14 @@ export async function POST(req: Request) {
 
 export async function GET() {
   try {
-    const result = await chatService.getLatestResponse();
-    
-    if (!result) {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/chat/subscribe`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
       return NextResponse.json(
         { 
           error: 'No chat response available yet',
@@ -58,14 +68,8 @@ export async function GET() {
       );
     }
 
-    const response: SubscribeResponse = {
-      assistantId: result.assistantId,
-      threadId: result.threadId,
-      content: result.text.value,
-      timestamp: Date.now()
-    };
-
-    return NextResponse.json(response);
+    const data = await response.json();
+    return NextResponse.json(data);
   } catch (error) {
     console.error('Chat subscription error:', error);
     return NextResponse.json(
