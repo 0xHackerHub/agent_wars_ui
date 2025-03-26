@@ -11,6 +11,9 @@ importers:
       '@aptos-labs/ts-sdk':
         specifier: ^1.37.1
         version: 1.37.1(axios@1.8.4)(got@11.8.6)
+      '@langchain/anthropic':
+        specifier: ^0.3.15
+        version: 0.3.15(@langchain/core@0.3.43(openai@4.89.0(ws@7.5.10(bufferutil@4.0.9)(utf-8-validate@5.0.10))(zod@3.24.2)))
       '@langchain/core':
         specifier: ^0.3.43
         version: 0.3.43(openai@4.89.0(ws@7.5.10(bufferutil@4.0.9)(utf-8-validate@5.0.10))(zod@3.24.2))

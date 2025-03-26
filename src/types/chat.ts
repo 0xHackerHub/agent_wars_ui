@@ -6,6 +6,14 @@ export interface ChatMessage {
     error?: string;
     sessionId?: string;
   }
+
+
+interface ChatSessionMessage {
+  id: string;
+  content: string;
+  sender: 'user' | 'assistant';
+  timestamp: number;
+}
   
   export interface ChatSession {
     id: string;
@@ -14,3 +22,7 @@ export interface ChatMessage {
     createdAt: number;
     updatedAt: number;
   } 
+
+  interface ImportedChatSession extends ChatSession {
+    messages: ChatSessionMessage[];
+  }

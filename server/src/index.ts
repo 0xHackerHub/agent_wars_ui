@@ -14,7 +14,7 @@ export const corsOptions: CorsOptions = {
   origin: [
     "https://www.agent-w.xyz",
     "http://localhost:3000",
-  ], // Replace with your frontend URL
+  ],
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
   optionsSuccessStatus: 200,
@@ -25,7 +25,11 @@ app.use(express.json());
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok' });
+  res.json({ 
+    status: 'ok', 
+    agentReady: chatService.isReady(),
+    walletAddress: chatService.getWalletAddress()
+  });
 });
 
 // Debug endpoint to check database connection
@@ -37,6 +41,7 @@ app.get('/debug', async (req, res) => {
       status: 'ok', 
       message: 'Database connection successful',
       walletCount: count.length,
+      agentStatus: chatService.isReady() ? 'ready' : 'initializing',
       databaseUrl: process.env.DATABASE_URL?.substring(0, 20) + '...' // Only show part of the URL for security
     });
   } catch (error) {
@@ -147,7 +152,7 @@ app.get('/api/chat', (async (req, res) => {
   }
 }) as RequestHandler);
 
-// Send message
+// Send message - Improved with better response formatting
 app.post('/api/chat', (async (req, res) => {
   try {
     const { userAddress, message, role="user", sessionId } = req.body;
@@ -156,7 +161,7 @@ app.post('/api/chat', (async (req, res) => {
     }
 
     console.log('Processing message from user:', userAddress);
-    console.log('Message content:', message);
+    console.log('Message content:', message.substring(0, 100) + (message.length > 100 ? '...' : ''));
     console.log('Session ID (if provided):', sessionId);
 
     // Get or create wallet
@@ -210,38 +215,31 @@ app.post('/api/chat', (async (req, res) => {
       console.log('Updated existing session timestamp:', chatSessionId);
     }
 
-    // Format message properly for the chatService
-    const formattedMessage = {
-      role: role,
-      content: message
-    };
-
-    // Generate AI response
-    const aiResponse = await chatService.generateResponse(formattedMessage);
-    console.log('AI response:', aiResponse);
-
-    // Handle the streaming response
-    let responseText = '';
-    if (aiResponse.body) {
-      const reader = aiResponse.body.getReader();
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        responseText += new TextDecoder().decode(value);
+    // Get message history for context
+    const previousMessages = await db.query.chatHistory.findMany({
+      where: eq(chatHistory.sessionId, chatSessionId),
+      orderBy: (chatHistory, { asc }) => [asc(chatHistory.createdAt)],
+    });
+    
+    // Format previous messages for the chatService
+    const formattedPreviousMessages = previousMessages.map(msg => ({
+      role: msg.response === msg.message ? 'assistant' : 'user',
+      content: msg.message
+    }));
+    
+    // Add the current message
+    const formattedMessages = [
+      ...formattedPreviousMessages,
+      {
+        role: role,
+        content: message
       }
-    }
+    ];
 
-    // Convert markdown to plain text
-    responseText = responseText
-      .replace(/\*\*(.*?)\*\*/g, '$1') // Bold
-      .replace(/\*(.*?)\*/g, '$1')     // Italic
-      .replace(/\[(.*?)\]\((.*?)\)/g, '$1') // Links
-      .replace(/`(.*?)`/g, '$1')       // Code
-      .replace(/#{1,6}\s/g, '')        // Headers
-      .replace(/\n/g, ' ');            // Newlines to spaces
-
-    console.log('Processed response text:', responseText);
-
+    // Generate AI response with streaming
+    console.log(`Sending ${formattedMessages.length} messages to AI service`);
+    const aiResponse = await chatService.generateResponse(formattedMessages);
+    
     // Save user message
     const [userMessage] = await db.insert(chatHistory).values([{
       userAddress,
@@ -250,6 +248,23 @@ app.post('/api/chat', (async (req, res) => {
       response: '',
       createdAt: new Date()
     }]).returning();
+    
+    // Handle the streaming response
+    let responseText = '';
+    if (aiResponse.body) {
+      const reader = aiResponse.body.getReader();
+      const decoder = new TextDecoder();
+      
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        responseText += decoder.decode(value, { stream: true });
+      }
+      // Final decode to ensure all content is captured
+      responseText += decoder.decode();
+    } else {
+      responseText = "The agent could not generate a response at this time.";
+    }
 
     // Save AI response
     const [assistantMessage] = await db.insert(chatHistory).values([{
@@ -261,16 +276,38 @@ app.post('/api/chat', (async (req, res) => {
     }]).returning();
 
     // Format response to match frontend expectations
-    res.json({
+    // Extract transaction info for better frontend display
+    const txHashMatch = responseText.match(/Transaction hash: \*\*([0-9a-fx]+)\*\*/);
+    const txHash = txHashMatch ? txHashMatch[1] : null;
+    
+    // Look for position IDs
+    const positionIdMatch = responseText.match(/Position ID: \*\*(\d+)\*\*/);
+    const positionId = positionIdMatch ? positionIdMatch[1] : null;
+    
+    // Check if there was an error in the response
+    const hasError = responseText.toLowerCase().includes('error') || 
+                    responseText.toLowerCase().includes('failed') ||
+                    responseText.toLowerCase().includes('cannot');
+                    
+    // Format response with transaction details if available
+    const enhancedResponse = {
       messages: [
         {
           id: assistantMessage.id,
           text: responseText,
-          type: 'assistant'
+          type: 'assistant',
+          metadata: {
+            transactionHash: txHash,
+            positionId: positionId,
+            hasError: hasError,
+            toolsUsed: responseText.includes('**Tool:')
+          }
         }
       ],
       sessionId: chatSessionId
-    });
+    };
+    
+    res.json(enhancedResponse);
   } catch (error) {
     console.error('Error processing message:', error);
     res.status(500).json({ 
@@ -280,6 +317,26 @@ app.post('/api/chat', (async (req, res) => {
   }
 }) as RequestHandler);
 
+// Add a new endpoint to get agent status
+app.get('/api/agent/status', (req, res) => {
+  try {
+    const walletAddress = chatService.getWalletAddress();
+    
+    res.json({
+      status: 'ok',
+      agentReady: chatService.isReady(),
+      walletAddress: walletAddress,
+      network: 'MAINNET'
+    });
+  } catch (error) {
+    console.error('Error fetching agent status:', error);
+    res.status(500).json({
+      status: 'error',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);
-}); 
+});

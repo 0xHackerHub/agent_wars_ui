@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { useTheme } from "@/components/theme-provider";
 import { AnimatePresence, motion } from "framer-motion";
 import { Route } from "@/types/routes";
-import { NewChatScreen, NewAgentScreen, BrowseAgentsScreen, ConnectionsScreen, ModelsScreen } from "./Screen";
 import { cn } from "@/lib/utils";
 import { ChatSession } from "@/types/chat";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -13,6 +12,11 @@ import { useWallet } from "@/hooks/useWallet";
 import { truncateAddress } from "@aptos-labs/ts-sdk";
 import { ChatHistory } from "@/components/ChatHistory";
 import { AccountAddress } from "@aptos-labs/ts-sdk";
+import ConnectionDetails from "@/components/Connection";
+import BrowseAgentsScreen from "@/components/BrowseAgentScreen";
+import ModelsScreen from "@/components/ModalScreen";
+import NewAgentScreen from "@/components/NewAgentScreen";
+import { NewChatScreen } from "./Screen";
 
 // Animation variants
 const sidebarVariants = {
@@ -329,7 +333,7 @@ export default function BaseLayout({ children }: { children: React.ReactNode }) 
       case 'browse-agents':
         return <BrowseAgentsScreen />;
       case 'connections':
-        return <ConnectionsScreen />;
+        return <ConnectionDetails />;
       case 'models':
         return <ModelsScreen />;
         default:
