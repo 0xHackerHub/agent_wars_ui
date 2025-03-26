@@ -376,13 +376,13 @@ const NewChatScreen: React.FC<NewChatScreenProps> = ({ currentSession, onSession
                   <div className="absolute left-6 top-1/2 -translate-y-1/2 pointer-events-none text-sm text-gray-500 dark:text-neutral-500">
                     <TypeAnimation
                       sequence={[
-                        'Ask me anything...',
+                        'Ask me anything on aptos...',
                         2000,
-                        'Ask me about cars...',
+                        'Ask me about joule protocol...',
                         2000,
-                        'Ask me about people...',
+                        'Ask me about liquidswap...',
                         2000,
-                        'Ask me to write code...',
+                        'Ask me about thala ...',
                         2000,
                       ]}
                       wrapper="span"

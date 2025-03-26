@@ -159,7 +159,7 @@ class ChatService {
           
           For transactions:
           - Make the transaction amount VERY CLEAR to the user
-          - Always report the transaction hash when a transaction is successful using the format: "Transaction hash: **[HASH]**"
+          - Always report the transaction hash when a transaction is successful using the format: "Transaction hash: [HASH]"
           - Always report any position IDs or other identifiers for future reference
           
           The response also contains token/token[] which contains the name and address of the token and the decimals.
@@ -307,6 +307,7 @@ async generateResponse(
         if (message._getType() === "ai") {
           // Process AI message to fix formatting
           let content = message.content.toString();
+          console.log("AI Msg:",content);
           
           // Remove duplicated tool declarations and undefined tools
           content = content.replace(/\*\*Tool: undefined\*\*/g, '');
