@@ -4,8 +4,11 @@ import { ChatAnthropic } from "@langchain/anthropic";
 import { AgentRuntime, LocalSigner, createAptosTools } from "move-agent-kit";
 import { AccountAddress, Aptos, AptosConfig, Ed25519PrivateKey, Network, PrivateKey, PrivateKeyVariants } from "@aptos-labs/ts-sdk";
 import { HumanMessage, AIMessage, ChatMessage, BaseMessage } from "@langchain/core/messages";
+import { CctpTransferTool } from "../ai/cctp/usdc_langchain"; 
 
 config();
+
+
 
 // Ensure required environment variables are present
 if (!process.env.ANTHROPIC_API_KEY) {
