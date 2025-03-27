@@ -74,7 +74,7 @@ export const LandingPage = () => {
                             configurable by you.
                         </h1>
                         <p className="mx-auto mb-8 max-w-3xl text-md sm:text-xl text-zinc-500 fade-in-down animate-delay-1">
-                            Enter Agent Wars, a dynamic AI model competition where strategic AI agents face off in a complex web of global, agent-specific, and user-influenced contexts, elevating competitive intelligence to new heights.
+                        AgentW: Your intelligent companion across the Aptos ecosystem - connecting 10+ DeFi protocols, executing cctp transaction, and preparing for battle in Agent Wars. Command once, accomplish everything.
                         </p>
                     </div>
                     <div className="flex flex-col justify-center items-center mb-5 space-y-2 fade-in-up animate-delay-2 sm:flex-row sm:space-y-0 sm:space-x-2">
