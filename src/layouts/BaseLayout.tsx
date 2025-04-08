@@ -17,6 +17,13 @@ import BrowseAgentsScreen from "@/components/BrowseAgentScreen";
 import ModelsScreen from "@/components/ModalScreen";
 import NewAgentScreen from "@/components/NewAgentScreen";
 import { NewChatScreen } from "./Screen";
+import { ReactNode } from "react";
+
+export const CanvasIcon = (): ReactNode => {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width="1.3rem" height="1.3rem" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="tabler-icon tabler-icon-users-group"><path d="M10 13a2 2 0 1 0 4 0a2 2 0 0 0 -4 0"></path><path d="M8 21v-1a2 2 0 0 1 2 -2h4a2 2 0 0 1 2 2v1"></path><path d="M15 5a2 2 0 1 0 4 0a2 2 0 0 0 -4 0"></path><path d="M17 10h2a2 2 0 0 1 2 2v1"></path><path d="M5 5a2 2 0 1 0 4 0a2 2 0 0 0 -4 0"></path><path d="M3 13v-1a2 2 0 0 1 2 -2h2"></path></svg>
+  );
+};
 
 // Animation variants
 const sidebarVariants = {
@@ -138,6 +145,14 @@ const InferenceModeNav = ({
             icon={<Box size={16} />} 
             label="Models" 
             route="models"
+            currentRoute={activeRoute}
+          />
+        </div>
+        <div onClick={() => setActiveRoute('canvas')}>
+          <NavItem 
+            icon={<CanvasIcon />} 
+            label="W-Canvas" 
+            route="canvas"
             currentRoute={activeRoute}
           />
         </div>

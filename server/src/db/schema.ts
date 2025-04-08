@@ -40,3 +40,21 @@ export const chatHistory = pgTable("chatHistory", {
   response: text("response").notNull(),
   createdAt: timestamp("createdAt").notNull().defaultNow(),
 });
+
+export const credentials = pgTable('credentials', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  name: text('name').notNull(),
+  value: text('value').notNull(),
+  nodeId: text('node_id').notNull(),
+  canvasId: text('canvas_id').notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+export const canvases = pgTable('canvases', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  name: text('name').notNull(),
+  data: text('data').notNull(), // JSON stringified canvas data
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
