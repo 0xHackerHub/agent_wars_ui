@@ -15,6 +15,13 @@
       "when": 1742835487266,
       "tag": "0001_puzzling_shape",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1744367395206,
+      "tag": "0002_chilly_darkstar",
+      "breakpoints": true
     }
   ]
 }

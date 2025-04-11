@@ -5,6 +5,7 @@ import { wallets, chatHistory, chatSessions } from './db/schema';
 import { eq } from 'drizzle-orm';
 import { config } from 'dotenv';
 import { chatService } from './ai/openai';
+import {createPipeHandler} from "./routes/flow"
 config();
 
 const app = express();
@@ -336,6 +337,8 @@ app.get('/api/agent/status', (req, res) => {
     });
   }
 });
+
+app.post('/api/flow', createPipeHandler as RequestHandler)
 
 app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);

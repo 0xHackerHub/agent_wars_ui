@@ -1,8 +1,25 @@
 import "@/styles/globals.css";
+import { ReactFlowProvider } from "@xyflow/react";
 
 import { GeistSans } from "geist/font/sans";
 import { type Metadata } from "next";
 import { siteConfig } from "site";
+import { create } from "zustand";
+
+const useAgentwflowState = create((set) => ({
+  nodes: [],
+  edges: [],
+  activeNode: null,
+  consoleRef: null,
+  sidebarRef: null,
+  isConsoleOpen: false,
+  setNodes: (nodes) => set({ nodes }),
+  setEdges: (edges) => set({ edges }),
+  setActiveNode: (activeNode) => set({ activeNode }),
+  setConsoleRef: (consoleRef) => set({ consoleRef }),
+  setSidebarRef: (sidebarRef) => set({ sidebarRef }),
+  toggleConsole: () => set((state) => ({ isConsoleOpen: !state.isConsoleOpen })),
+}));
 
 export const metadata: Metadata = {
   title: {
@@ -61,7 +78,9 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={`${GeistSans.variable}`}>
-      <body>{children}</body>
+      <ReactFlowProvider>
+        <body>{children}</body>
+      </ReactFlowProvider>
     </html>
   );
 }

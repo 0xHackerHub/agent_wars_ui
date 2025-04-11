@@ -5,7 +5,10 @@ import {
   timestamp, 
   varchar, 
   primaryKey,
-  uuid 
+  uuid ,
+  boolean,
+  integer,
+  jsonb
 } from "drizzle-orm/pg-core";
 
 export const wallets = pgTable("wallets", {
@@ -58,3 +61,51 @@ export const canvases = pgTable('canvases', {
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 });
+
+type actionsType = 
+    "chat_model"
+    | "worker"
+    | "supervisor"
+    | "document_loader"
+    | "embedding"
+    | "graph"
+    | "llm"
+    | "memory"
+    | "moderation"
+    | "multi_agent"
+    | "chain";
+  
+  
+
+
+export type toolMetadata = {
+  toolName: string
+  toolInput: any
+  nextToCall: string
+  description: string
+  callCount: number
+  amount?: number
+}
+
+
+export const pipeFlow = pgTable('pipe_Flow', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  ownerId: uuid().references(() => wallets.id),
+  title: varchar().notNull(),
+  description: text()
+})
+
+
+export const pipe = pgTable('pipes', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  pipeFlowId: uuid().references(() => pipeFlow.id),
+  name: text('name').notNull(),
+  metadata: jsonb('metadata').$type<toolMetadata>(),
+  multiRun: boolean('multi_run').default(false),
+  currentCallCount: integer('current_call_count').default(0),
+  maxCalls: integer('maxCalls').default(0),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+})
+
+
