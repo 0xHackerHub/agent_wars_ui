@@ -54,16 +54,27 @@ export function WorkerNode({ id, data, selected }: NodeProps<WorkerNodeData>) {
     }, []);
   
     const updateNodeData = (field: keyof WorkerNodeData, value: string | number) => {
-      setNodes((nds) =>
-        nds.map((node) => {
-          if (node.id === id) {
-            const finalValue = field === 'maxIterations' ? parseInt(value as string, 10) || 0 : value;
-            return { ...node, data: { ...node.data, [field]: finalValue } };
-          }
-          return node;
-        })
-      );
-    };
+        setNodes((nds) => // Use the setter function from Zustand
+          nds.map((node) => { // Iterate over all nodes
+            if (node.id === id) { // Find the node being edited
+              // Special handling for number inputs to ensure they are stored as numbers
+              const finalValue = field === 'maxIterations'
+                ? parseInt(value as string, 10) || 1 // Parse as integer, default to 1 if invalid/empty
+                : value; // Otherwise, use the value directly (string)
+  
+              // Return a new node object with updated data
+              return {
+                ...node,
+                data: {
+                  ...node.data,
+                  [field]: finalValue, // Update the specific field
+                },
+              };
+            }
+            return node; // Return other nodes unchanged
+          })
+        );
+      };
   
     const onInfoClick = () => console.log(`Info clicked for Worker node: ${id}`);
   

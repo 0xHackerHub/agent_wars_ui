@@ -18,6 +18,7 @@ import ModelsScreen from "@/components/ModalScreen";
 import NewAgentScreen from "@/components/NewAgentScreen";
 import { NewChatScreen } from "./Screen";
 import { ReactNode } from "react";
+import CanvasPage from "@/app/canvas/page";
 
 export const CanvasIcon = (): ReactNode => {
   return (
@@ -349,6 +350,8 @@ export default function BaseLayout({ children }: { children: React.ReactNode }) 
         return <BrowseAgentsScreen />;
       case 'connections':
         return <ConnectionDetails />;
+      case 'canvas':
+        return <CanvasPage />;
       case 'models':
         return <ModelsScreen />;
         default:
